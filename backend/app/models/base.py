@@ -1,20 +1,10 @@
 """
 Base model class for SQLAlchemy models
+
+This module is kept for backward compatibility.
+New code should import from app.core.database instead.
 """
-from sqlalchemy import create_engine
-from sqlalchemy.orm import declarative_base, sessionmaker
-from app.core.config import settings
+from app.core.database import Base, get_sync_session as get_db, get_async_session
 
-engine = create_engine(settings.database_url)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-Base = declarative_base()
-
-
-def get_db():
-    """Database dependency for FastAPI"""
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+# Re-export for backward compatibility
+__all__ = ["Base", "get_db", "get_async_session"]
