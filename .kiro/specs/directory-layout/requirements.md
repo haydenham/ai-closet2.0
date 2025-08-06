@@ -18,17 +18,18 @@ This document outlines the requirements for transforming the existing local fash
 4. WHEN a user logs out THEN the system SHALL invalidate the session and redirect to login page
 5. IF a user forgets their password THEN the system SHALL provide a secure password reset mechanism
 
-### Requirement 2: Style Profiling and Pre-Quiz System
+### Requirement 2: Visual Style Profiling and Outfit-Building Quiz System
 
-**User Story:** As a new user, I want to complete a style assessment quiz, so that the system can recommend the most appropriate AI model for my fashion preferences.
+**User Story:** As a new user, I want to complete a visual style assessment by building outfits from clothing options, so that the system can assign appropriate gender and style tags for personalized fashion recommendations.
 
 #### Acceptance Criteria
 
-1. WHEN a user completes account creation THEN the system SHALL present a mandatory style profiling quiz
-2. WHEN a user answers quiz questions THEN the system SHALL capture responses about style preferences, fashion trends, and personal taste
-3. WHEN the quiz is completed THEN the system SHALL determine and assign the appropriate AI model endpoint based on responses
-4. WHEN a user profile is created THEN the system SHALL store the style profile and model assignment in the database
-5. IF a user wants to retake the quiz THEN the system SHALL allow profile updates and model reassignment
+1. WHEN a user completes account creation THEN the system SHALL present a mandatory 8-question visual style quiz
+2. WHEN a user starts the quiz THEN the system SHALL first ask for gender selection to determine the appropriate clothing options
+3. WHEN a user progresses through quiz questions THEN the system SHALL present visual clothing items for selection (tops, bottoms, shoes, accessories, complete outfits)
+4. WHEN the quiz is completed THEN the system SHALL analyze the selected clothing items to determine and assign appropriate style tags
+5. WHEN a user profile is created THEN the system SHALL store the style profile with gender and style tags in the database
+6. IF a user wants to retake the quiz THEN the system SHALL allow profile updates and tag reassignment
 
 ### Requirement 3: Closet Management and Item Storage
 
@@ -43,17 +44,17 @@ This document outlines the requirements for transforming the existing local fash
 5. WHEN a user reopens the application THEN the system SHALL restore their complete closet from the database
 6. IF a user uploads duplicate items THEN the system SHALL detect and handle duplicates appropriately
 
-### Requirement 4: AI Model Integration and Endpoint Management
+### Requirement 4: AI Model Integration and Tag-Based Personalization
 
-**User Story:** As a user with a specific style profile, I want the system to use the AI model that best matches my preferences, so that I receive personalized fashion recommendations.
+**User Story:** As a user with a specific style profile, I want the system to use personalized tags that match my preferences, so that I receive tailored fashion recommendations from the AI model.
 
 #### Acceptance Criteria
 
-1. WHEN the system needs to generate recommendations THEN it SHALL call the Google Cloud AI endpoint assigned to the user's style profile
-2. WHEN calling an AI model THEN the system SHALL handle authentication and rate limiting for Google Cloud services
-3. WHEN an AI model responds THEN the system SHALL parse the outfit description and extract individual clothing items
-4. IF an AI endpoint is unavailable THEN the system SHALL provide appropriate error handling and fallback options
-5. WHEN multiple models are available THEN the system SHALL route requests to the correct model based on user profile
+1. WHEN the system needs to generate recommendations THEN it SHALL call the Google Gemini API with user-specific gender and style tags
+2. WHEN calling the AI model THEN the system SHALL handle authentication and rate limiting for Google Cloud services
+3. WHEN the AI model responds THEN the system SHALL parse the outfit description and extract individual clothing items
+4. IF the AI endpoint is unavailable THEN the system SHALL provide appropriate error handling and fallback options
+5. WHEN generating prompts THEN the system SHALL incorporate the user's assigned tags to personalize the AI model's responses
 
 ### Requirement 5: Outfit Generation and Recommendation
 

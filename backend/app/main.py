@@ -8,6 +8,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.database import init_database, close_database, check_database_health
+from app.api.auth import router as auth_router
+from app.api.quiz import router as quiz_router
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +54,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include API routers
+app.include_router(auth_router)
+app.include_router(quiz_router)
 
 
 @app.get("/")
