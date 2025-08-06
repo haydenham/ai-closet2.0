@@ -2,7 +2,14 @@
 Google Cloud Vision API service for automatic feature extraction from clothing images
 """
 from typing import List, Dict, Optional, Tuple
-from google.cloud import vision
+
+try:
+    from google.cloud import vision
+    HAS_GCP_VISION = True
+except ImportError:
+    HAS_GCP_VISION = False
+    vision = None
+
 import io
 
 from app.core.config import settings

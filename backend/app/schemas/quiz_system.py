@@ -138,6 +138,15 @@ class QuizResponseWithItems(QuizResponse):
     assigned_category_obj: Optional[StyleCategory] = None
 
 
+class EnhancedQuizResponse(QuizResponse):
+    """Schema for enhanced quiz response with hybrid style detection"""
+    selected_items: List[QuizClothingItem] = []
+    assigned_category_obj: Optional[StyleCategory] = None
+    is_hybrid: bool = False
+    hybrid_styles: List[str] = []
+    primary_score: Optional[float] = None
+
+
 class FeatureLearningDataCreate(BaseModel):
     """Schema for creating feature learning data"""
     feature_name: str = Field(..., min_length=1, max_length=100)
@@ -242,3 +251,38 @@ class FeatureInsights(BaseModel):
     top_correlations: List[FeatureCorrelation]
     accuracy_by_source: Dict[str, float]
     recent_discoveries: List[FeatureLearningData]
+
+
+class StyleAssignmentFeedbackCreate(BaseModel):
+    """Schema for creating style assignment feedback"""
+    accuracy_rating: int = Field(..., ge=1, le=5)
+    preferred_style: Optional[str] = Field(None, max_length=100)
+    feedback_type: str = Field(..., pattern="^(too_broad|too_narrow|completely_wrong|mostly_right|perfect)$")
+    feedback_text: Optional[str] = Field(None, max_length=1000)
+    feature_feedback: Optional[Dict[str, Any]] = None
+
+
+class StyleAssignmentFeedback(BaseModel):
+    """Schema for style assignment feedback"""
+    id: uuid.UUID
+    quiz_response_id: uuid.UUID
+    user_id: uuid.UUID
+    accuracy_rating: int
+    preferred_style: Optional[str] = None
+    feedback_type: str
+    feedback_text: Optional[str] = None
+    feature_feedback: Optional[Dict[str, Any]] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class AlgorithmImprovementMetrics(BaseModel):
+    """Schema for algorithm improvement metrics"""
+    total_feedback_count: int
+    average_accuracy_rating: float
+    feedback_distribution: Dict[str, int]
+    most_common_issues: List[Dict[str, Any]]
+    improvement_suggestions: List[str]
+    confidence_vs_accuracy: Dict[str, float]

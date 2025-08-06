@@ -10,6 +10,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.database import init_database, close_database, check_database_health
 from app.api.auth import router as auth_router
 from app.api.quiz import router as quiz_router
+from app.api.feature_learning import router as feature_learning_router
+from app.services.scheduled_learning_service import start_learning_scheduler, stop_learning_scheduler
 
 logger = logging.getLogger(__name__)
 
@@ -24,8 +26,12 @@ async def lifespan(app: FastAPI):
     try:
         await init_database()
         logger.info("Database initialized successfully")
+        
+        # Start learning scheduler
+        await start_learning_scheduler()
+        logger.info("Learning scheduler started successfully")
     except Exception as e:
-        logger.error(f"Failed to initialize database: {e}")
+        logger.error(f"Failed to initialize application: {e}")
         raise
     
     yield
@@ -33,6 +39,10 @@ async def lifespan(app: FastAPI):
     # Shutdown
     logger.info("Shutting down Fashion AI Platform...")
     try:
+        # Stop learning scheduler
+        stop_learning_scheduler()
+        logger.info("Learning scheduler stopped successfully")
+        
         await close_database()
         logger.info("Database connections closed successfully")
     except Exception as e:
@@ -58,6 +68,7 @@ app.add_middleware(
 # Include API routers
 app.include_router(auth_router)
 app.include_router(quiz_router)
+app.include_router(feature_learning_router)
 
 
 @app.get("/")

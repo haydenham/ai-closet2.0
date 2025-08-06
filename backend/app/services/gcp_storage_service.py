@@ -4,8 +4,16 @@ Google Cloud Storage service for handling file uploads and image management
 import os
 import uuid
 from typing import Optional, List, BinaryIO
-from google.cloud import storage
-from google.cloud.exceptions import NotFound
+
+try:
+    from google.cloud import storage
+    from google.cloud.exceptions import NotFound
+    HAS_GCP_STORAGE = True
+except ImportError:
+    HAS_GCP_STORAGE = False
+    storage = None
+    NotFound = Exception
+
 from PIL import Image
 import io
 
@@ -16,6 +24,9 @@ class GCPStorageService:
     """Service for managing files in Google Cloud Storage"""
     
     def __init__(self):
+        if not HAS_GCP_STORAGE:
+            raise ImportError("Google Cloud Storage dependencies not available")
+            
         self.client = storage.Client()
         self.images_bucket_name = settings.gcs_bucket_name or f"{settings.google_cloud_project}-fashion-ai-images"
         self.uploads_bucket_name = f"{settings.google_cloud_project}-fashion-ai-uploads"

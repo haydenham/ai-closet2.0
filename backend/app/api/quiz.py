@@ -26,6 +26,7 @@ from app.schemas.quiz_system import (
     QuizResponseCreate,
     QuizResponseFeedback,
     QuizResponseWithItems,
+    EnhancedQuizResponse,
     QuizQuestionsResponse,
     QuizClothingItemsResponse,
     StyleScores,
@@ -34,7 +35,10 @@ from app.schemas.quiz_system import (
     FeatureLearningDataCreate,
     FeatureValidation,
     FeatureCorrelation,
-    FeatureInsights
+    FeatureInsights,
+    StyleAssignmentFeedback,
+    StyleAssignmentFeedbackCreate,
+    AlgorithmImprovementMetrics
 )
 
 router = APIRouter(prefix="/quiz", tags=["quiz"])
@@ -87,13 +91,13 @@ async def get_quiz_questions(
     return QuizQuestionsResponse(gender=gender, questions=questions)
 
 
-@router.post("/submit", response_model=QuizResponse)
+@router.post("/submit", response_model=EnhancedQuizResponse)
 async def submit_quiz(
     quiz_data: QuizResponseCreate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_sync_session)
 ):
-    """Submit quiz responses and get style assignment"""
+    """Submit quiz responses and get enhanced style assignment with confidence scoring"""
     try:
         response = QuizResponseService.process_complete_quiz(
             db=db,
@@ -102,7 +106,33 @@ async def submit_quiz(
             selected_items=quiz_data.selected_items,
             weights=quiz_data.weights
         )
-        return response
+        
+        # Load related data for enhanced response
+        item_ids = [uuid.UUID(item_id) for item_id in response.selected_item_ids]
+        selected_items = db.query(QuizClothingItem).filter(
+            QuizClothingItem.id.in_(item_ids)
+        ).all()
+        
+        # Extract hybrid style information from calculated_scores
+        is_hybrid = response.calculated_scores.get('_is_hybrid', False)
+        hybrid_styles = response.calculated_scores.get('_hybrid_styles', [])
+        primary_score = response.calculated_scores.get('_primary_score', 0.0)
+        
+        # Clean up the scores (remove internal fields)
+        clean_scores = {k: v for k, v in response.calculated_scores.items() if not k.startswith('_')}
+        response.calculated_scores = clean_scores
+        
+        # Create enhanced response
+        enhanced_response = EnhancedQuizResponse(
+            **response.__dict__,
+            selected_items=selected_items,
+            assigned_category_obj=response.assigned_category_obj,
+            is_hybrid=is_hybrid,
+            hybrid_styles=hybrid_styles,
+            primary_score=primary_score
+        )
+        
+        return enhanced_response
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -135,6 +165,42 @@ async def submit_quiz_feedback(
     )
     
     return {"message": "Feedback submitted successfully"}
+
+
+@router.post("/style-feedback/{response_id}", response_model=StyleAssignmentFeedback)
+async def submit_style_assignment_feedback(
+    response_id: uuid.UUID,
+    feedback: StyleAssignmentFeedbackCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_sync_session)
+):
+    """Submit detailed feedback on style assignment accuracy"""
+    from app.services.quiz_service import StyleFeedbackService
+    
+    # Verify the response belongs to the current user
+    response = db.query(QuizResponse).filter(
+        QuizResponse.id == response_id,
+        QuizResponse.user_id == current_user.id
+    ).first()
+    
+    if not response:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Quiz response not found"
+        )
+    
+    style_feedback = StyleFeedbackService.create_style_feedback(
+        db=db,
+        quiz_response_id=response_id,
+        user_id=current_user.id,
+        accuracy_rating=feedback.accuracy_rating,
+        feedback_type=feedback.feedback_type,
+        preferred_style=feedback.preferred_style,
+        feedback_text=feedback.feedback_text,
+        feature_feedback=feedback.feature_feedback
+    )
+    
+    return style_feedback
 
 
 @router.get("/categories", response_model=List[StyleCategory])
@@ -394,3 +460,34 @@ async def get_feature_insights(
         accuracy_by_source={},
         recent_discoveries=[]
     )
+
+
+@router.get("/admin/algorithm-metrics", response_model=AlgorithmImprovementMetrics)
+async def get_algorithm_improvement_metrics(
+    days: int = Query(30, ge=1, le=365),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_sync_session)
+):
+    """Get algorithm improvement metrics based on user feedback (Admin only)"""
+    from app.services.quiz_service import StyleFeedbackService
+    
+    # TODO: Add admin permission check
+    metrics = StyleFeedbackService.get_feedback_metrics(db, days)
+    
+    return AlgorithmImprovementMetrics(**metrics)
+
+
+@router.get("/admin/feature-accuracy/{feature_name}")
+async def get_feature_accuracy_analysis(
+    feature_name: str,
+    days: int = Query(30, ge=1, le=365),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_sync_session)
+):
+    """Get accuracy analysis for a specific feature (Admin only)"""
+    from app.services.quiz_service import StyleFeedbackService
+    
+    # TODO: Add admin permission check
+    analysis = StyleFeedbackService.analyze_feature_accuracy(db, feature_name, days)
+    
+    return analysis

@@ -423,3 +423,74 @@ class FeatureCorrelation(Base):
     def co_occurrence_rate(self) -> float:
         """Calculate co-occurrence rate"""
         return self.co_occurrence_count / self.total_occurrences if self.total_occurrences > 0 else 0.0
+
+
+class StyleAssignmentFeedback(Base):
+    """User feedback on style assignments for algorithm improvement"""
+    
+    __tablename__ = "style_assignment_feedback"
+    
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), 
+        primary_key=True, 
+        default=uuid.uuid4
+    )
+    
+    quiz_response_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("quiz_responses.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+    
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+    
+    # User's assessment of the assigned style
+    accuracy_rating: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False
+    )
+    
+    # User's preferred style if different from assigned
+    preferred_style: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    
+    # Specific feedback on what was wrong/right
+    feedback_type: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        index=True
+    )
+    
+    feedback_text: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    
+    # Which aspects were most/least accurate
+    feature_feedback: Mapped[Optional[Dict[str, Any]]] = mapped_column(
+        JSON,
+        nullable=True,
+        default=dict
+    )
+    
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), 
+        server_default=func.now(),
+        nullable=False
+    )
+    
+    # Relationships
+    quiz_response: Mapped["QuizResponse"] = relationship("QuizResponse")
+    user: Mapped["User"] = relationship("User")
+    
+    __table_args__ = (
+        CheckConstraint("accuracy_rating >= 1 AND accuracy_rating <= 5", 
+                       name='check_accuracy_rating'),
+        CheckConstraint("feedback_type IN ('too_broad', 'too_narrow', 'completely_wrong', 'mostly_right', 'perfect')", 
+                       name='check_feedback_type'),
+    )
+    
+    def __repr__(self) -> str:
+        return f"<StyleAssignmentFeedback(id={self.id}, rating={self.accuracy_rating}, type={self.feedback_type})>"

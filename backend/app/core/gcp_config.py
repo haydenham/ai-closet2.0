@@ -2,8 +2,14 @@
 Google Cloud Platform specific configuration
 """
 import os
-from google.cloud import secretmanager
 from typing import Optional
+
+try:
+    from google.cloud import secretmanager
+    HAS_GCP = True
+except ImportError:
+    HAS_GCP = False
+    secretmanager = None
 
 
 class GCPConfig:
@@ -13,7 +19,7 @@ class GCPConfig:
         self.project_id = project_id or os.getenv('GOOGLE_CLOUD_PROJECT')
         self.secret_client = None
         
-        if self.project_id:
+        if self.project_id and HAS_GCP:
             try:
                 self.secret_client = secretmanager.SecretManagerServiceClient()
             except Exception:

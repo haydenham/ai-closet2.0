@@ -255,12 +255,166 @@ class StyleCategoryService:
         return category
     
     @staticmethod
+    def calculate_weighted_style_scores(
+        db: Session,
+        selected_items: Dict[str, QuizClothingItem],
+        gender: str,
+        weights: Optional[Dict[str, float]] = None
+    ) -> Dict[str, float]:
+        """Calculate weighted style scores based on question categories"""
+        categories = StyleCategoryService.get_categories_by_gender(db, gender)
+        
+        # Default weights prioritizing complete outfit
+        default_weights = {
+            'top': 0.2,
+            'bottom': 0.2,
+            'shoes': 0.15,
+            'layering': 0.1,
+            'accessory': 0.05,
+            'complete_outfit': 0.4
+        }
+        
+        if weights:
+            default_weights.update(weights)
+        
+        scores = {}
+        
+        for category in categories:
+            category_score = 0.0
+            total_weight = 0.0
+            
+            # Calculate weighted score for each selected item
+            for question_category, item in selected_items.items():
+                if item and question_category in default_weights:
+                    weight = default_weights[question_category]
+                    item_features = set(item.features or [])
+                    category_features = set(category.features or [])
+                    
+                    # Calculate feature match percentage for this item
+                    if item_features:
+                        match_count = len(item_features.intersection(category_features))
+                        item_score = (match_count / len(item_features)) * 100
+                        category_score += item_score * weight
+                        total_weight += weight
+            
+            # Normalize by total weight
+            if total_weight > 0:
+                scores[category.name] = category_score / total_weight
+            else:
+                scores[category.name] = 0.0
+        
+        return scores
+    
+    @staticmethod
+    def calculate_confidence_score(
+        scores: Dict[str, float],
+        selected_items: Dict[str, QuizClothingItem]
+    ) -> float:
+        """Calculate confidence in style assignment based on score distribution"""
+        if not scores:
+            return 0.0
+        
+        sorted_scores = sorted(scores.values(), reverse=True)
+        
+        # If no clear winner, confidence is low
+        if len(sorted_scores) < 2:
+            return 0.0
+        
+        best_score = sorted_scores[0]
+        second_best = sorted_scores[1]
+        
+        # Confidence based on gap between best and second-best scores
+        if best_score == 0:
+            return 0.0
+        
+        # Calculate confidence as the relative gap
+        gap = best_score - second_best
+        confidence = min(gap / best_score, 1.0) * 100
+        
+        # Boost confidence if complete outfit strongly matches
+        complete_outfit_item = selected_items.get('complete_outfit')
+        if complete_outfit_item and best_score > 60:
+            confidence = min(confidence * 1.2, 100.0)
+        
+        return round(confidence, 2)
+    
+    @staticmethod
+    def detect_hybrid_styles(
+        scores: Dict[str, float],
+        threshold: float = 15.0
+    ) -> List[str]:
+        """Detect if user has hybrid style preferences"""
+        if not scores:
+            return []
+        
+        # Find styles that are close to the top score
+        max_score = max(scores.values())
+        hybrid_styles = []
+        
+        for style, score in scores.items():
+            if max_score - score <= threshold and score > 30:
+                hybrid_styles.append(style)
+        
+        return sorted(hybrid_styles, key=lambda x: scores[x], reverse=True)
+    
+    @staticmethod
+    def get_enhanced_style_assignment(
+        db: Session,
+        selected_items: Dict[str, QuizClothingItem],
+        gender: str,
+        weights: Optional[Dict[str, float]] = None
+    ) -> Dict[str, Any]:
+        """Get comprehensive style assignment with confidence and hybrid detection"""
+        # Calculate weighted scores
+        scores = StyleCategoryService.calculate_weighted_style_scores(
+            db, selected_items, gender, weights
+        )
+        
+        if not scores:
+            return {
+                'primary_style': None,
+                'confidence': 0.0,
+                'scores': {},
+                'hybrid_styles': [],
+                'is_hybrid': False
+            }
+        
+        # Get primary style
+        primary_style = max(scores, key=scores.get)
+        primary_score = scores[primary_style]
+        
+        # Calculate confidence
+        confidence = StyleCategoryService.calculate_confidence_score(scores, selected_items)
+        
+        # Detect hybrid styles
+        hybrid_styles = StyleCategoryService.detect_hybrid_styles(scores)
+        is_hybrid = len(hybrid_styles) > 1
+        
+        # Get category object
+        primary_category = db.query(StyleCategory).filter(
+            and_(
+                StyleCategory.name == primary_style,
+                StyleCategory.gender == gender
+            )
+        ).first()
+        
+        return {
+            'primary_style': primary_style,
+            'primary_category': primary_category,
+            'primary_score': primary_score,
+            'confidence': confidence,
+            'scores': scores,
+            'hybrid_styles': hybrid_styles,
+            'is_hybrid': is_hybrid
+        }
+    
+    @staticmethod
     def calculate_style_scores(
         db: Session,
         selected_items: List[QuizClothingItem],
         gender: str
     ) -> Dict[str, float]:
-        """Calculate style scores for selected items"""
+        """Calculate style scores for selected items (legacy method)"""
         categories = StyleCategoryService.get_categories_by_gender(db, gender)
         scores = {}
         
@@ -282,7 +436,7 @@ class StyleCategoryService:
         selected_items: List[QuizClothingItem],
         gender: str
     ) -> Tuple[Optional[StyleCategory], float]:
-        """Get the best matching style category"""
+        """Get the best matching style category (legacy method)"""
         scores = StyleCategoryService.calculate_style_scores(db, selected_items, gender)
         
         if not scores:
@@ -400,7 +554,50 @@ class QuizResponseService:
         selected_items: Dict[str, uuid.UUID],
         weights: Optional[Dict[str, float]] = None
     ) -> QuizResponse:
-        """Process a complete quiz submission"""
+        """Process a complete quiz submission with enhanced matching algorithm"""
+        # Get selected clothing items
+        item_ids = list(selected_items.values())
+        items_list = db.query(QuizClothingItem).filter(
+            QuizClothingItem.id.in_(item_ids)
+        ).all()
+        
+        # Create items dictionary for enhanced processing
+        items_dict = {}
+        for category, item_id in selected_items.items():
+            item = next((item for item in items_list if item.id == item_id), None)
+            items_dict[category] = item
+        
+        # Get enhanced style assignment
+        style_assignment = StyleCategoryService.get_enhanced_style_assignment(
+            db, items_dict, gender, weights
+        )
+        
+        # Prepare response data
+        assigned_category = style_assignment['primary_style'] or "Unknown"
+        assigned_category_id = (
+            style_assignment['primary_category'].id 
+            if style_assignment['primary_category'] else None
+        )
+        confidence_score = style_assignment['confidence']
+        calculated_scores = style_assignment['scores']
+        
+        # Add hybrid style information to scores
+        if style_assignment['is_hybrid']:
+            calculated_scores['_hybrid_styles'] = style_assignment['hybrid_styles']
+            calculated_scores['_is_hybrid'] = True
+            calculated_scores['_primary_score'] = style_assignment['primary_score']
+        
+        # Create quiz response
+        response = QuizResponseService.create_quiz_response(
+            db=db,
+            user_id=user_id,
+            selected_item_ids=[str(item_id) for item_id in item_ids],
+            calculated_scores=calculated_scores,
+            assigned_category=assigned_category,
+            assigned_category_id=assigned_category_id,
+            confidence_score=confidence_score
+        )
+        
         # Default weights for different question types
         default_weights = {
             'top': 0.2,
@@ -413,31 +610,6 @@ class QuizResponseService:
         
         if weights:
             default_weights.update(weights)
-        
-        # Get selected clothing items
-        item_ids = list(selected_items.values())
-        items = db.query(QuizClothingItem).filter(
-            QuizClothingItem.id.in_(item_ids)
-        ).all()
-        
-        # Calculate style scores
-        scores = StyleCategoryService.calculate_style_scores(db, items, gender)
-        
-        # Get best matching category
-        best_category, confidence = StyleCategoryService.get_best_matching_category(
-            db, items, gender
-        )
-        
-        # Create quiz response
-        response = QuizResponseService.create_quiz_response(
-            db=db,
-            user_id=user_id,
-            selected_item_ids=[str(item_id) for item_id in item_ids],
-            calculated_scores=scores,
-            assigned_category=best_category.name if best_category else "Unknown",
-            assigned_category_id=best_category.id if best_category else None,
-            confidence_score=confidence
-        )
         
         # Add response items with weights
         item_selections = []
@@ -453,11 +625,167 @@ class QuizResponseService:
         )
         
         # Update selection counts for items
-        for item in items:
+        for item in items_list:
             item.increment_selection_count()
         
         db.commit()
         return response
+
+
+class StyleFeedbackService:
+    """Service for managing style assignment feedback and algorithm improvement"""
+    
+    @staticmethod
+    def create_style_feedback(
+        db: Session,
+        quiz_response_id: uuid.UUID,
+        user_id: uuid.UUID,
+        accuracy_rating: int,
+        feedback_type: str,
+        preferred_style: Optional[str] = None,
+        feedback_text: Optional[str] = None,
+        feature_feedback: Optional[Dict[str, Any]] = None
+    ) -> "StyleAssignmentFeedback":
+        """Create style assignment feedback"""
+        from app.models.quiz_system import StyleAssignmentFeedback
+        
+        feedback = StyleAssignmentFeedback(
+            quiz_response_id=quiz_response_id,
+            user_id=user_id,
+            accuracy_rating=accuracy_rating,
+            feedback_type=feedback_type,
+            preferred_style=preferred_style,
+            feedback_text=feedback_text,
+            feature_feedback=feature_feedback or {}
+        )
+        db.add(feedback)
+        db.commit()
+        db.refresh(feedback)
+        return feedback
+    
+    @staticmethod
+    def get_feedback_metrics(
+        db: Session,
+        days: int = 30
+    ) -> Dict[str, Any]:
+        """Get algorithm improvement metrics based on user feedback"""
+        from app.models.quiz_system import StyleAssignmentFeedback
+        from datetime import datetime, timedelta
+        
+        cutoff_date = datetime.utcnow() - timedelta(days=days)
+        
+        feedback_query = db.query(StyleAssignmentFeedback).filter(
+            StyleAssignmentFeedback.created_at >= cutoff_date
+        )
+        
+        all_feedback = feedback_query.all()
+        
+        if not all_feedback:
+            return {
+                'total_feedback_count': 0,
+                'average_accuracy_rating': 0.0,
+                'feedback_distribution': {},
+                'most_common_issues': [],
+                'improvement_suggestions': [],
+                'confidence_vs_accuracy': {}
+            }
+        
+        # Calculate metrics
+        total_count = len(all_feedback)
+        avg_rating = sum(f.accuracy_rating for f in all_feedback) / total_count
+        
+        # Feedback type distribution
+        feedback_dist = {}
+        for feedback in all_feedback:
+            feedback_dist[feedback.feedback_type] = feedback_dist.get(feedback.feedback_type, 0) + 1
+        
+        # Most common issues
+        issues = []
+        for feedback_type, count in feedback_dist.items():
+            if feedback_type in ['too_broad', 'too_narrow', 'completely_wrong']:
+                issues.append({
+                    'issue': feedback_type,
+                    'count': count,
+                    'percentage': (count / total_count) * 100
+                })
+        
+        issues.sort(key=lambda x: x['count'], reverse=True)
+        
+        # Generate improvement suggestions
+        suggestions = StyleFeedbackService._generate_improvement_suggestions(feedback_dist, avg_rating)
+        
+        return {
+            'total_feedback_count': total_count,
+            'average_accuracy_rating': round(avg_rating, 2),
+            'feedback_distribution': feedback_dist,
+            'most_common_issues': issues[:5],
+            'improvement_suggestions': suggestions,
+            'confidence_vs_accuracy': {}  # TODO: Implement confidence correlation
+        }
+    
+    @staticmethod
+    def _generate_improvement_suggestions(
+        feedback_dist: Dict[str, int],
+        avg_rating: float
+    ) -> List[str]:
+        """Generate algorithm improvement suggestions based on feedback patterns"""
+        suggestions = []
+        total_feedback = sum(feedback_dist.values())
+        
+        if avg_rating < 3.0:
+            suggestions.append("Overall algorithm accuracy is low - consider retraining with more diverse data")
+        
+        if feedback_dist.get('too_broad', 0) / total_feedback > 0.3:
+            suggestions.append("Many users find categories too broad - consider adding more specific subcategories")
+        
+        if feedback_dist.get('too_narrow', 0) / total_feedback > 0.3:
+            suggestions.append("Categories may be too narrow - consider merging similar styles")
+        
+        if feedback_dist.get('completely_wrong', 0) / total_feedback > 0.2:
+            suggestions.append("High rate of completely wrong assignments - review feature mappings")
+        
+        return suggestions
+    
+    @staticmethod
+    def analyze_feature_accuracy(
+        db: Session,
+        feature_name: str,
+        days: int = 30
+    ) -> Dict[str, Any]:
+        """Analyze accuracy of a specific feature in style assignments"""
+        from app.models.quiz_system import StyleAssignmentFeedback, QuizResponse, QuizResponseItem, QuizClothingItem
+        from datetime import datetime, timedelta
+        
+        cutoff_date = datetime.utcnow() - timedelta(days=days)
+        
+        # Get feedback for responses that included items with this feature
+        feedback_with_feature = db.query(StyleAssignmentFeedback).join(
+            QuizResponse, StyleAssignmentFeedback.quiz_response_id == QuizResponse.id
+        ).join(
+            QuizResponseItem, QuizResponse.id == QuizResponseItem.quiz_response_id
+        ).join(
+            QuizClothingItem, QuizResponseItem.clothing_item_id == QuizClothingItem.id
+        ).filter(
+            StyleAssignmentFeedback.created_at >= cutoff_date,
+            QuizClothingItem.features.contains([feature_name])
+        ).all()
+        
+        if not feedback_with_feature:
+            return {
+                'feature_name': feature_name,
+                'sample_size': 0,
+                'average_accuracy': 0.0,
+                'accuracy_trend': 'insufficient_data'
+            }
+        
+        avg_accuracy = sum(f.accuracy_rating for f in feedback_with_feature) / len(feedback_with_feature)
+        
+        return {
+            'feature_name': feature_name,
+            'sample_size': len(feedback_with_feature),
+            'average_accuracy': round(avg_accuracy, 2),
+            'accuracy_trend': 'improving' if avg_accuracy > 3.5 else 'needs_attention'
+        }
 
 
 class FeatureLearningService:
