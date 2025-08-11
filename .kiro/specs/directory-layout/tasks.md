@@ -89,41 +89,39 @@
     - Write comprehensive tests for storage operations and error scenarios
     - _Requirements: 3.1, 3.4, 7.3, 9.1, 9.2_
 
-  - [ ] 5.2 Implement CLIP embedding generation with GCP integration
-    - Integrate CLIP model for generating clothing item embeddings
-    - Create embedding storage system in database with GCP optimization
-    - Build batch processing for multiple image embeddings using GCP services
-    - Write unit tests for embedding generation and storage
-    - _Requirements: 3.2, 3.6, 9.1_
+  - [x] 5.2 Build closet item management with GCP Vision integration
+    - Create endpoints for viewing, updating, and deleting closet items with automatic feature extraction
+    - Implement closet organization by categories using GCP Vision API features
+    - Build closet statistics and summary functionality with feature-based analytics
+    - Integrate GCP Vision API for automatic tagging of user-uploaded clothing items
+    - Write integration tests for complete closet management workflows with feature extraction
+    - _Requirements: 3.2, 3.3, 3.5, 9.1, 9.2_
 
-  - [ ] 5.3 Build closet item management with GCP storage integration
-    - Create endpoints for viewing, updating, and deleting closet items
-    - Implement closet organization by categories with GCP storage
-    - Build closet statistics and summary functionality
-    - Write integration tests for complete closet management workflows
-    - _Requirements: 3.3, 3.5, 9.1, 9.2_
-
-- [ ] 6. Develop AI model integration and recommendation system
-  - [ ] 6.1 Create Gemini model integration with GCP authentication
+- [ ] 6. Develop Gemini AI integration and feature-based recommendation system
+  - [x] 6.1 Create Gemini model integration with structured JSON output
     - Implement Google Gemini API client with GCP service account authentication
-    - Build tag-based prompt generation system using gender and style tags
-    - Create request/response handling leveraging GCP AI services
-    - Write unit tests with mocked AI responses and tag combinations
+    - Build prompt generation system using gender, style, weather (warm/cold), and occasion tags
+    - Train model to output structured JSON format: {"top": {"type": "item_type", "features": ["x", "y", "z"]}}
+    - Create request/response handling with proper JSON parsing and validation
+    - Write unit tests with mocked AI responses and various tag combinations
     - _Requirements: 4.1, 4.2, 4.4, 9.1, 9.5_
 
-  - [ ] 6.2 Build tag-aware outfit generation with GCP Vision integration
-    - Implement AI response parsing to extract outfit components from Gemini
-    - Create outfit item categorization using GCP Vision API features
-    - Build outfit recommendation data structure with tag metadata
-    - Write tests for outfit parsing with tag-specific response formats
-    - _Requirements: 5.2, 5.3, 9.1_
+  - [x] 6.2 Build feature-based outfit matching algorithm
+    - Implement feature matching algorithm using GCP Vision extracted features
+    - Create scoring system that matches AI-requested features with user's closet items
+    - Build outfit recommendation ranking based on feature compatibility scores
+    - Implement weather-aware matching (warm/cold tag integration)
+    - Add color coordination and style consistency validation
+    - Write comprehensive tests for matching algorithm with various feature combinations
+    - _Requirements: 4.1, 4.3, 5.2, 9.1_
 
-  - [ ] 6.3 Implement similarity matching algorithm with GCP optimization
-    - Create vector similarity search using embeddings with GCP performance optimization
-    - Build matching algorithm to find closest closet items
-    - Implement recommendation ranking and scoring system
-    - Write performance tests for similarity search operations
-    - _Requirements: 5.4, 8.4, 9.1, 9.7_
+  - [ ] 6.3 Implement outfit recommendation API with feedback loop
+    - Create outfit recommendation endpoint that combines Gemini AI with feature matching
+    - Build recommendation history and user feedback collection system
+    - Implement recommendation improvement based on user satisfaction data
+    - Add recommendation analytics and performance tracking
+    - Write integration tests for complete recommendation workflows
+    - _Requirements: 4.3, 5.2, 8.1, 9.1, 9.2_
 
 - [ ] 7. Build comprehensive API layer with GCP integration
   - [ ] 7.1 Create user management API endpoints

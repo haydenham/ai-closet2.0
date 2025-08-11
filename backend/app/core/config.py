@@ -39,6 +39,11 @@ class Settings(BaseSettings):
     cloud_sql_connection_name: Optional[str] = None
     gcs_bucket_name: Optional[str] = None
     
+    # Gemini AI Configuration
+    gcp_project_id: Optional[str] = "heroic-alpha-468018-r7"
+    gcp_location: str = "us-central1"
+    gemini_endpoint_id: Optional[str] = "2461079757404504064"
+    
     # File Storage
     upload_dir: str = "uploads"
     max_file_size: int = 10 * 1024 * 1024  # 10MB
@@ -75,6 +80,21 @@ class Settings(BaseSettings):
     @property
     def is_development(self) -> bool:
         return self.environment.lower() == "development"
+    
+    @property
+    def GCP_PROJECT_ID(self) -> str:
+        """Get GCP project ID with fallback to google_cloud_project."""
+        return self.gcp_project_id or self.google_cloud_project or os.getenv('GOOGLE_CLOUD_PROJECT', '')
+    
+    @property
+    def GCP_LOCATION(self) -> str:
+        """Get GCP location for Vertex AI."""
+        return self.gcp_location
+    
+    @property
+    def GEMINI_ENDPOINT_ID(self) -> str:
+        """Get Gemini endpoint ID."""
+        return self.gemini_endpoint_id or os.getenv('GEMINI_ENDPOINT_ID', '')
 
 
 settings = Settings()

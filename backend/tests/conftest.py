@@ -114,6 +114,25 @@ def db_session():
 
 
 @pytest.fixture(scope="function")
+def client(db_session):
+    """Create test sync HTTP client with database dependency override"""
+    from app.core.database import get_sync_session
+    
+    def override_get_sync_session():
+        """Override database session dependency for testing"""
+        yield db_session
+    
+    # Override the database dependency
+    app.dependency_overrides[get_sync_session] = override_get_sync_session
+    
+    with TestClient(app) as client:
+        yield client
+    
+    # Clean up dependency override
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture(scope="function")
 async def async_client(async_session: AsyncSession):
     """Create test async HTTP client with database dependency override"""
     
@@ -129,3 +148,31 @@ async def async_client(async_session: AsyncSession):
     
     # Clean up dependency override
     app.dependency_overrides.clear()
+
+
+@pytest.fixture(scope="function")
+async def authenticated_user(async_session: AsyncSession):
+    """Create a test user for authentication tests"""
+    from app.models.user import User
+    from app.services.auth_service import auth_service
+    
+    # Create test user
+    user_data = {
+        "email": "test@example.com",
+        "password": "TestPassword123!",
+        "first_name": "Test",
+        "last_name": "User"
+    }
+    
+    user = await auth_service.create_user(user_data, async_session)
+    user.is_verified = True  # Mark as verified for testing
+    await async_session.commit()
+    await async_session.refresh(user)
+    
+    return user
+
+
+@pytest.fixture(scope="function")
+def async_db_session(async_session):
+    """Alias for async_session fixture for consistency"""
+    return async_session

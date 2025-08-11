@@ -11,6 +11,8 @@ from app.core.database import init_database, close_database, check_database_heal
 from app.api.auth import router as auth_router
 from app.api.quiz import router as quiz_router
 from app.api.feature_learning import router as feature_learning_router
+from app.api.closet import router as closet_router
+from app.api.outfit_recommendations import router as outfit_recommendations_router
 from app.services.scheduled_learning_service import start_learning_scheduler, stop_learning_scheduler
 
 logger = logging.getLogger(__name__)
@@ -69,6 +71,8 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(quiz_router)
 app.include_router(feature_learning_router)
+app.include_router(closet_router)
+app.include_router(outfit_recommendations_router)
 
 
 @app.get("/")

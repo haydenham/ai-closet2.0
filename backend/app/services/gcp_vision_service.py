@@ -19,6 +19,8 @@ class GCPVisionService:
     """Service for analyzing clothing images using Google Cloud Vision API"""
     
     def __init__(self):
+        if not HAS_GCP_VISION:
+            raise ImportError("Google Cloud Vision API is not available")
         self.client = vision.ImageAnnotatorClient()
         
         # Feature mapping for clothing analysis
