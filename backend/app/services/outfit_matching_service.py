@@ -58,6 +58,7 @@ class OutfitMatchResult:
     color_harmony_score: float = 0.0
     style_consistency_score: float = 0.0
     weather_appropriateness: float = 0.0
+    missing_categories: List[str] = None
 
 
 class OutfitMatchingService:
@@ -211,7 +212,25 @@ class OutfitMatchingService:
         # Calculate overall scores
         result = self._calculate_overall_scores(result, weather, style_preference)
         
+        # Track missing categories for future shopping feature
+        missing_categories = []
+        if ai_recommendation.top and not result.top:
+            missing_categories.append('top')
+        if ai_recommendation.bottom and not result.bottom:
+            missing_categories.append('bottom')
+        if ai_recommendation.shoes and not result.shoes:
+            missing_categories.append('shoes')
+        if ai_recommendation.outerwear and not result.outerwear:
+            missing_categories.append('outerwear')
+        if ai_recommendation.accessories and len(result.accessories or []) < len(ai_recommendation.accessories):
+            missing_categories.append('accessories')
+        
+        result.missing_categories = missing_categories
+        
         logger.info(f"Outfit matching completed with overall score: {result.overall_score:.3f}")
+        if missing_categories:
+            logger.info(f"Missing categories for future shopping feature: {missing_categories}")
+        
         return result
     
     def _group_items_by_category(self, items: List[ClothingItem]) -> Dict[str, List[ClothingItem]]:

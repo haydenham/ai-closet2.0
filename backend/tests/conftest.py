@@ -176,3 +176,172 @@ async def authenticated_user(async_session: AsyncSession):
 def async_db_session(async_session):
     """Alias for async_session fixture for consistency"""
     return async_session
+
+
+@pytest.fixture(scope="function")
+async def test_user(async_session: AsyncSession):
+    """Create a test user for user management tests"""
+    from app.models.user import User
+    from app.services.auth_service import auth_service
+    from app.schemas.user import UserCreate
+    from sqlalchemy import select
+    import uuid
+    
+    # Create test user with unique email
+    unique_id = str(uuid.uuid4())[:8]
+    user_data = UserCreate(
+        email=f"testuser{unique_id}@example.com",
+        password="TestPassword123!",
+        first_name="Test",
+        last_name="User"
+    )
+    
+    user_response, _ = await auth_service.register_user(user_data, async_session)
+    # Get the actual user object from the database
+    result = await async_session.execute(select(User).where(User.email == user_data.email))
+    user = result.scalar_one()
+    user.is_verified = True  # Mark as verified for testing
+    await async_session.commit()
+    await async_session.refresh(user)
+    
+    return user
+
+
+async def create_auth_headers(user):
+    """Helper function to create authentication headers for any user"""
+    from app.services.auth_service import auth_service
+    
+    # Create access token for user
+    tokens = await auth_service.create_user_tokens(user)
+    
+    return {
+        "Authorization": f"Bearer {tokens.access_token}"
+    }
+
+
+@pytest.fixture(scope="function")
+async def auth_headers(test_user):
+    """Create authentication headers for test user"""
+    return await create_auth_headers(test_user)
+
+
+@pytest.fixture(scope="function")
+async def test_user_with_style_profile(async_session: AsyncSession):
+    """Create a test user with style profile"""
+    from app.models.user import User
+    from app.models.style_profile import StyleProfile
+    from app.services.auth_service import auth_service
+    from app.schemas.user import UserCreate
+    from sqlalchemy import select
+    import uuid
+    
+    # Create test user with unique email
+    unique_id = str(uuid.uuid4())[:8]
+    user_data = UserCreate(
+        email=f"testuser{unique_id}@example.com",
+        password="TestPassword123!",
+        first_name="Test",
+        last_name="User"
+    )
+    
+    user_response, _ = await auth_service.register_user(user_data, async_session)
+    # Get the actual user object from the database
+    result = await async_session.execute(select(User).where(User.email == user_data.email))
+    user = result.scalar_one()
+    user.is_verified = True
+    await async_session.commit()
+    await async_session.refresh(user)
+    
+    # Create style profile
+    style_profile = StyleProfile(
+        user_id=user.id,
+        quiz_responses={"gender": "female", "style": "casual"},
+        assigned_model="casual_female_model",
+        style_preferences=["casual", "comfortable"],
+        fashion_goals=["versatility", "comfort"],
+        preferred_colors=["blue", "black"],
+        body_type="average",
+        lifestyle="casual",
+        budget_range="moderate"
+    )
+    
+    async_session.add(style_profile)
+    await async_session.commit()
+    await async_session.refresh(style_profile)
+    
+    return user, style_profile
+
+
+@pytest.fixture(scope="function")
+async def test_user_with_data(async_session: AsyncSession):
+    """Create a test user with clothing items and recommendations"""
+    from app.models.user import User
+    from app.models.clothing_item import ClothingItem
+    from app.models.outfit_recommendation import OutfitRecommendation
+    from app.services.auth_service import auth_service
+    from app.schemas.user import UserCreate
+    from sqlalchemy import select
+    from datetime import datetime, timedelta
+    import uuid
+    
+    # Create test user with unique email
+    unique_id = str(uuid.uuid4())[:8]
+    user_data = UserCreate(
+        email=f"testuser{unique_id}@example.com",
+        password="TestPassword123!",
+        first_name="Test",
+        last_name="User"
+    )
+    
+    user_response, _ = await auth_service.register_user(user_data, async_session)
+    # Get the actual user object from the database
+    result = await async_session.execute(select(User).where(User.email == user_data.email))
+    user = result.scalar_one()
+    user.is_verified = True
+    await async_session.commit()
+    await async_session.refresh(user)
+    
+    # Create clothing items
+    clothing_items = []
+    categories = ["tops", "bottoms", "shoes"]
+    
+    for i, category in enumerate(categories):
+        item = ClothingItem(
+            user_id=user.id,
+            filename=f"test_item_{i}.jpg",
+            original_filename=f"test_item_{i}.jpg",
+            category=category,
+            image_url=f"https://example.com/test_{i}.jpg",
+            embedding=[0.1 + i * 0.1] * 512,
+            times_recommended=i + 1,
+            upload_date=datetime.utcnow() - timedelta(days=i)
+        )
+        clothing_items.append(item)
+        async_session.add(item)
+    
+    await async_session.commit()
+    
+    # Create outfit recommendations
+    recommendations = []
+    for i in range(3):
+        rec = OutfitRecommendation(
+            user_id=user.id,
+            prompt=f"Test prompt {i}",
+            ai_response=f"Test AI response {i}",
+            ai_model_used="test_model",
+            feedback_score=4 + (i % 2),  # Ratings of 4 or 5
+            is_favorite=(i == 0),
+            created_at=datetime.utcnow() - timedelta(days=i)
+        )
+        recommendations.append(rec)
+        async_session.add(rec)
+    
+    await async_session.commit()
+    
+    # Refresh all objects
+    for item in clothing_items:
+        await async_session.refresh(item)
+    for rec in recommendations:
+        await async_session.refresh(rec)
+    
+    return user, clothing_items, recommendations

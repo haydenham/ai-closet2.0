@@ -15,13 +15,13 @@ from app.models.clothing_item import ClothingItem, ClothingCategory
 from app.schemas.clothing_item import (
     ClothingItemResponse,
     ClothingItemUpdate,
-    ClothingItemUpload,
-    ClothingItemSearch,
     ClothingItemStats,
     ClothingCategoryResponse,
     ClothingCategoryCreate,
     ClothingCategoryUpdate
 )
+from app.schemas.security import SecureClothingItemUpload, SecureSearchQuery
+from app.core.security import FileValidator, SecurityConfig
 from app.services.gcp_storage_service import GCPStorageService
 from app.services.gcp_vision_service import GCPVisionService
 
@@ -51,53 +51,62 @@ async def upload_clothing_item(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Upload a clothing item with automatic feature extraction using GCP Vision API
+    Upload a clothing item with comprehensive security validation and automatic feature extraction using GCP Vision API
     """
-    # Validate file type
-    if not file.content_type or not file.content_type.startswith('image/'):
-        raise HTTPException(status_code=400, detail="File must be an image")
-    
-    # Read file data
+    # Read file data first
     file_data = await file.read()
+    
+    # Comprehensive file validation
+    try:
+        file_info = FileValidator.validate_image_file(file_data, file.filename)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
+    # Validate form data using secure schema
+    try:
+        form_data = SecureClothingItemUpload(
+            category=category,
+            category_id=category_id,
+            color=color,
+            brand=brand,
+            size=size,
+            description=description,
+            tags=json.loads(tags) if tags else []
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid form data: {str(e)}")
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid tags format")
     
     try:
         # Check if services are available
         if not storage_service or not vision_service:
             raise HTTPException(status_code=503, detail="GCP services not available")
         
-        # Upload to GCP Storage
+        # Upload to GCP Storage using validated filename
         image_url, stored_filename = storage_service.upload_user_image(
             file_data=file_data,
             user_id=str(current_user.id),
-            filename=file.filename,
-            content_type=file.content_type
+            filename=file_info['safe_filename'],
+            content_type=file_info['mime_type']
         )
         
         # Analyze image with GCP Vision API for automatic feature extraction
         vision_analysis = vision_service.analyze_clothing_image(file_data)
         
-        # Parse tags from form data
-        parsed_tags = []
-        if tags:
-            import json
-            try:
-                parsed_tags = json.loads(tags)
-            except json.JSONDecodeError:
-                parsed_tags = [tag.strip() for tag in tags.split(',') if tag.strip()]
-        
         # Merge user-provided tags with extracted features
         extracted_features = vision_analysis.get('extracted_features', [])
-        all_tags = list(set(parsed_tags + extracted_features))
+        all_tags = list(set(form_data.tags + extracted_features))
         
         # Use suggested category if user didn't provide one or if Vision API has high confidence
-        final_category = category
+        final_category = form_data.category
         suggested_category = vision_analysis.get('suggested_category', 'unknown')
-        if suggested_category != 'unknown' and not category:
+        if suggested_category != 'unknown' and not form_data.category:
             final_category = suggested_category
         
         # Use detected colors if not provided
-        final_color = color
-        if not color and vision_analysis.get('dominant_colors'):
+        final_color = form_data.color
+        if not form_data.color and vision_analysis.get('dominant_colors'):
             dominant_color = vision_analysis['dominant_colors'][0]
             final_color = dominant_color.get('color_name', 'unknown')
         
@@ -105,16 +114,18 @@ async def upload_clothing_item(
         clothing_item = ClothingItem(
             user_id=current_user.id,
             filename=stored_filename,
-            original_filename=file.filename,
+            original_filename=file_info['safe_filename'],
             image_url=image_url,
             category=final_category,
-            category_id=uuid.UUID(category_id) if category_id else None,
+            category_id=uuid.UUID(form_data.category_id) if form_data.category_id else None,
             color=final_color,
-            brand=brand,
-            size=size,
-            description=description,
+            brand=form_data.brand,
+            size=form_data.size,
+            description=form_data.description,
             tags=all_tags,
-            file_size=len(file_data)
+            file_size=file_info['size_bytes'],
+            image_width=file_info['width'],
+            image_height=file_info['height']
         )
         
         db.add(clothing_item)

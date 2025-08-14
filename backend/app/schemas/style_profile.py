@@ -118,3 +118,31 @@ class QuizResult(BaseModel):
     style_preferences: List[str]
     confidence_score: Optional[float] = Field(None, ge=0.0, le=1.0)
     recommendations: Optional[List[str]] = Field(default_factory=list)
+
+
+class UserPreferencesResponse(BaseModel):
+    """Schema for user preferences response"""
+    id: uuid.UUID
+    user_id: uuid.UUID
+    assigned_model: str
+    style_preferences: List[str]
+    fashion_goals: Optional[List[str]]
+    preferred_colors: Optional[List[str]]
+    body_type: Optional[str]
+    lifestyle: Optional[str]
+    budget_range: Optional[str]
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class UserPreferencesUpdate(BaseModel):
+    """Schema for user preferences updates"""
+    style_preferences: Optional[List[str]] = None
+    fashion_goals: Optional[List[str]] = None
+    preferred_colors: Optional[List[str]] = None
+    body_type: Optional[str] = Field(None, max_length=50)
+    lifestyle: Optional[str] = Field(None, max_length=100)
+    budget_range: Optional[str] = Field(None, max_length=50)

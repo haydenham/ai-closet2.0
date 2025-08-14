@@ -7,13 +7,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
 from app.schemas.user import (
-    UserCreate, 
     UserResponse, 
-    UserLogin, 
     TokenResponse,
-    EmailVerification,
-    PasswordReset,
-    PasswordResetConfirm
+    EmailVerification
+)
+from app.schemas.security import (
+    SecureUserCreate,
+    SecureUserLogin,
+    SecurePasswordReset,
+    SecurePasswordResetConfirm
 )
 from app.services.auth_service import auth_service
 from app.services.email_service import email_service
@@ -26,7 +28,7 @@ router = APIRouter(prefix="/auth", tags=["authentication"])
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def register_user(
-    user_data: UserCreate,
+    user_data: SecureUserCreate,
     db: AsyncSession = Depends(get_async_session)
 ):
     """
@@ -114,7 +116,7 @@ async def verify_email(
 
 @router.post("/login", response_model=TokenResponse)
 async def login_user(
-    login_data: UserLogin,
+    login_data: SecureUserLogin,
     db: AsyncSession = Depends(get_async_session)
 ):
     """
@@ -278,7 +280,7 @@ async def logout_user():
 
 @router.post("/forgot-password")
 async def forgot_password(
-    reset_request: PasswordReset,
+    reset_request: SecurePasswordReset,
     db: AsyncSession = Depends(get_async_session)
 ):
     """
@@ -316,7 +318,7 @@ async def forgot_password(
 
 @router.post("/reset-password")
 async def reset_password(
-    reset_data: PasswordResetConfirm,
+    reset_data: SecurePasswordResetConfirm,
     db: AsyncSession = Depends(get_async_session)
 ):
     """
