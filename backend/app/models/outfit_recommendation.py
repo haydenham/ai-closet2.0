@@ -216,5 +216,3 @@ class RecommendationFeedback(Base):
     def __repr__(self) -> str:
         return f"<RecommendationFeedback(id={self.id}, rating={self.rating})>"
 
-
-from sqlalchemy import Boolean

@@ -5,8 +5,13 @@ import json
 import logging
 from typing import Dict, List, Optional, Any
 from pydantic import BaseModel, ValidationError
-from vertexai.generative_models import GenerativeModel
-import vertexai
+
+try:  # Delay heavy imports / allow absence in some test contexts
+    import vertexai  # type: ignore
+    from vertexai.generative_models import GenerativeModel  # type: ignore
+except Exception:  # pragma: no cover - fallback when library not present
+    vertexai = None  # type: ignore
+    GenerativeModel = object  # type: ignore
 
 from app.core.config import settings
 
@@ -28,24 +33,40 @@ class OutfitRecommendation(BaseModel):
     outerwear: Optional[OutfitItem] = None
 
 
+class GeminiServiceError(Exception):
+    """Base exception for Gemini service errors"""
+
+
+class GeminiResponseError(GeminiServiceError):
+    """Raised when the model response is invalid or cannot be parsed"""
+
+
 class GeminiService:
-    """Service for interacting with Gemini model via Vertex AI."""
-    
+    """Service for interacting with Gemini model via Vertex AI (lazy init)."""
+
     def __init__(self):
-        """Initialize the Gemini service with Vertex AI configuration."""
         self.project_id = settings.GCP_PROJECT_ID
         self.location = settings.GCP_LOCATION
         self.endpoint_id = settings.GEMINI_ENDPOINT_ID
-        
-        # Initialize Vertex AI
-        vertexai.init(project=self.project_id, location=self.location)
-        
-        # Initialize the model
-        self.model = GenerativeModel(
-            model_name=f"projects/{self.project_id}/locations/{self.location}/endpoints/{self.endpoint_id}"
-        )
-        
+        self._model: Optional[GenerativeModel] = None
         self.system_prompt = self._get_system_prompt()
+
+    def _ensure_model(self):
+        """Lazily initialize Vertex AI client & model."""
+        if self._model is not None:
+            return
+        if not (self.project_id and self.location and self.endpoint_id):
+            raise GeminiServiceError("Gemini configuration incomplete (project/location/endpoint missing)")
+        if vertexai is None:
+            raise GeminiServiceError("vertexai library not available. Install google-cloud-aiplatform.")
+        try:
+            vertexai.init(project=self.project_id, location=self.location)
+            self._model = GenerativeModel(
+                model_name=f"projects/{self.project_id}/locations/{self.location}/endpoints/{self.endpoint_id}"
+            )
+            logger.info("Gemini model initialized lazily")
+        except Exception as e:  # pragma: no cover (network/auth dependent)
+            raise GeminiServiceError(f"Failed to initialize Gemini model: {e}") from e
     
     def _get_system_prompt(self) -> str:
         """Get the system prompt for the fashion advisor."""
@@ -126,25 +147,48 @@ Guidelines:
             
             logger.info(f"Generating outfit recommendation with prompt: {user_prompt[:100]}...")
             
+            # Ensure model is ready (lazy init)
+            self._ensure_model()
+
             # Combine system prompt with user prompt
             full_prompt = f"{self.system_prompt}\n\nUser Request:\n{user_prompt}"
-            
-            # Generate content using the model
-            response = self.model.generate_content(
+
+            response = self._model.generate_content(  # type: ignore[attr-defined]
                 contents=[full_prompt],
                 generation_config={"response_mime_type": "application/json"}
             )
-            
-            # Extract the response text
-            response_text = response.candidates[0].content.parts[0].text
-            logger.info(f"Received response from Gemini: {response_text[:200]}...")
-            
-            # Parse and validate the JSON response
+
+            response_text = self._extract_response_text(response)
+            logger.info(f"Received response from Gemini (truncated): {response_text[:200]}...")
             return self._parse_response(response_text)
-            
-        except Exception as e:
-            logger.error(f"Error generating outfit recommendation: {str(e)}")
-            raise Exception(f"Failed to generate outfit recommendation: {str(e)}")
+
+        except GeminiServiceError:
+            raise
+        except GeminiResponseError:
+            raise
+        except Exception as e:  # pragma: no cover (unexpected)
+            logger.error(f"Error generating outfit recommendation: {e}")
+            raise GeminiServiceError(f"Failed to generate outfit recommendation: {e}") from e
+
+    def _extract_response_text(self, response: Any) -> str:
+        """Safely extract JSON text from Vertex response."""
+        try:
+            candidates = getattr(response, 'candidates', None)
+            if not candidates:
+                raise GeminiResponseError("No candidates in model response")
+            # Find first part with non-empty text starting with JSON token
+            for cand in candidates:
+                content = getattr(cand, 'content', None)
+                parts = getattr(content, 'parts', []) if content else []
+                for part in parts:
+                    text_val = getattr(part, 'text', '')
+                    if isinstance(text_val, str) and text_val.strip() and text_val.lstrip().startswith(('{', '[')):
+                        return text_val.strip()
+            raise GeminiResponseError("No JSON payload found in model response parts")
+        except GeminiResponseError:
+            raise
+        except Exception as e:  # pragma: no cover
+            raise GeminiResponseError(f"Failed to extract response text: {e}") from e
     
     def _parse_response(self, response_text: str) -> OutfitRecommendation:
         """
@@ -170,12 +214,11 @@ Guidelines:
             return outfit
             
         except json.JSONDecodeError as e:
-            logger.error(f"Invalid JSON response: {response_text}")
-            raise ValueError(f"Invalid JSON response from model: {str(e)}")
-        
+            logger.error("Invalid JSON response from Gemini")
+            raise GeminiResponseError(f"Invalid JSON response: {e}") from e
         except ValidationError as e:
-            logger.error(f"Invalid response format: {response_text}")
-            raise ValueError(f"Invalid response format: {str(e)}")
+            logger.error("Gemini response failed schema validation")
+            raise GeminiResponseError(f"Invalid response format: {e}") from e
     
     def validate_inputs(
         self,
@@ -217,5 +260,24 @@ Guidelines:
         return True
 
 
-# Global service instance
-gemini_service = GeminiService()
+class _LazyGeminiProxy:
+    """Attribute-access lazy proxy around GeminiService to preserve existing import path usages."""
+    _instance: Optional[GeminiService] = None
+
+    def _get(self) -> GeminiService:
+        if self._instance is None:
+            self._instance = GeminiService()
+        return self._instance
+
+    def __getattr__(self, item):  # pragma: no cover (simple delegation)
+        return getattr(self._get(), item)
+
+    def __repr__(self):  # pragma: no cover
+        status = 'initialized' if self._instance else 'uninitialized'
+        return f"<LazyGeminiService {status}>"
+
+gemini_service = _LazyGeminiProxy()
+
+def get_gemini_service() -> GeminiService:
+    """Explicit accessor for the underlying initialized GeminiService."""
+    return gemini_service._get()

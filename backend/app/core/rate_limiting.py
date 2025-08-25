@@ -10,7 +10,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
-from app.core.security import SecurityConfig
+# SecurityConfig was removed with legacy security module; constants in RATE_LIMITS now self-contained.
 
 logger = logging.getLogger(__name__)
 

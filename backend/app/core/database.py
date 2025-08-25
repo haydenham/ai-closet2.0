@@ -3,7 +3,8 @@ Database configuration and connection management
 """
 import logging
 from typing import AsyncGenerator
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, text
+from importlib import util as _import_util
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 from sqlalchemy.pool import QueuePool
@@ -18,9 +19,15 @@ class Base(DeclarativeBase):
     pass
 
 
-# Synchronous engine for migrations and initial setup
+# Synchronous engine for migrations and initial setup.
+# If psycopg2 isn't available (Python 3.13 wheels), automatically fall back to psycopg driver
+_sync_db_url = settings.database_url
+if _sync_db_url.startswith("postgresql://") and _import_util.find_spec("psycopg2") is None and _import_util.find_spec("psycopg") is not None:
+    # Switch to psycopg (psycopg3) dialect
+    _sync_db_url = _sync_db_url.replace("postgresql://", "postgresql+psycopg://")
+
 sync_engine = create_engine(
-    settings.database_url,
+    _sync_db_url,
     poolclass=QueuePool,
     pool_size=10,
     max_overflow=20,
@@ -33,7 +40,6 @@ sync_engine = create_engine(
 async_database_url = settings.database_url.replace("postgresql://", "postgresql+asyncpg://")
 async_engine = create_async_engine(
     async_database_url,
-    poolclass=QueuePool,
     pool_size=10,
     max_overflow=20,
     pool_pre_ping=True,
@@ -158,7 +164,7 @@ async def check_database_health() -> bool:
     """
     try:
         async with async_engine.begin() as conn:
-            await conn.execute("SELECT 1")
+            await conn.execute(text("SELECT 1"))
         return True
     except Exception as e:
         logger.error(f"Database health check failed: {e}")

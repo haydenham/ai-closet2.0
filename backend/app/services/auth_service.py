@@ -149,6 +149,78 @@ class AuthService:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to create user account"
             )
+
+    async def create_user(
+        self,
+        user_data: "UserCreate | dict",
+        db: AsyncSession,
+        *,
+        verified: bool = False,
+        active: bool = True
+    ) -> User:
+        """Lightweight user creation helper (used in tests).
+
+        NOTE: This bypasses email verification token creation and email sending.
+
+        Args:
+            user_data: UserCreate schema instance or dict with keys email, password, first_name, last_name.
+            db: Async session.
+            verified: Whether to mark the user as verified immediately (tests convenience).
+            active: Whether account is active.
+
+        Returns:
+            The persisted User model instance.
+
+        Raises:
+            HTTPException 400 if email already exists.
+            HTTPException 500 for unexpected persistence errors.
+        """
+        # Normalize input
+        if isinstance(user_data, dict):
+            email = user_data.get("email")
+            password = user_data.get("password")
+            first_name = user_data.get("first_name")
+            last_name = user_data.get("last_name")
+        else:  # Pydantic model
+            email = user_data.email
+            password = user_data.password
+            first_name = user_data.first_name
+            last_name = user_data.last_name
+
+        # Basic existence check
+        existing = await db.execute(select(User).where(User.email == email))
+        if existing.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already registered"
+            )
+
+        hashed_password = self.hash_password(password)
+        db_user = User(
+            email=email,
+            password_hash=hashed_password,
+            first_name=first_name,
+            last_name=last_name,
+            is_verified=verified,
+            is_active=active,
+        )
+        try:
+            db.add(db_user)
+            await db.commit()
+            await db.refresh(db_user)
+            return db_user
+        except IntegrityError:
+            await db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already registered"
+            )
+        except Exception:
+            await db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to create user"
+            )
     
     async def verify_email(self, token: str, db: AsyncSession) -> UserResponse:
         """

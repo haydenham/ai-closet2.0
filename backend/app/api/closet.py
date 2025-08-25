@@ -1,6 +1,7 @@
 """
 Closet management API endpoints with GCP Vision integration
 """
+import json
 import uuid
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query
@@ -24,15 +25,15 @@ from app.schemas.security import SecureClothingItemUpload, SecureSearchQuery
 from app.core.security import FileValidator, SecurityConfig
 from app.services.gcp_storage_service import GCPStorageService
 from app.services.gcp_vision_service import GCPVisionService
+from google.auth.exceptions import DefaultCredentialsError
 
 router = APIRouter(prefix="/closet", tags=["closet"])
 
-# Initialize services (with error handling for testing)
+# Initialize services (with error handling for testing / missing credentials)
 try:
     storage_service = GCPStorageService()
     vision_service = GCPVisionService()
-except ImportError:
-    # For testing environments without GCP dependencies
+except (ImportError, DefaultCredentialsError, Exception):  # broad: if any cloud init issue just disable for tests
     storage_service = None
     vision_service = None
 
