@@ -1,0 +1,5 @@
+export { HomePage } from './HomePage'
+export { FeatureExtractionPage } from './FeatureExtractionPage'
+export { LoginPage } from './LoginPage'
+export { RecommendationsPage } from './RecommendationsPage'
+export { ClosetPage } from './ClosetPage'

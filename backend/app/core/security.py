@@ -18,8 +18,24 @@ class SecurityConfig:
 
 # -------------------- Input Sanitization --------------------
 class InputSanitizer:
-    _SQL_PATTERN = re.compile(r"(union select|drop table|--|;\s*delete|or\s+1=1|information_schema)", re.IGNORECASE)
-    _XSS_PATTERN = re.compile(r"(<script.*?>|javascript:|onerror=|onload=|<iframe|<object|<img .*?onerror=)", re.IGNORECASE)
+    # Broadened patterns to satisfy security validation tests
+    _SQL_PATTERN = re.compile(
+        r"("  # group start
+        r"union\s+select|drop\s+table|;\s*delete|;\s*update|;\s*insert|--|/\*|\*/|"  # common keywords/operators
+        r"or\s+1=1|"  # classic OR 1=1
+        r"['\"]\s*or\s*['\"]?1['\"]?=\s*['\"]?1|"  # variants like ' OR '1'='1
+        r"information_schema|xp_cmdshell"  # meta tables
+        r")",
+        re.IGNORECASE,
+    )
+    _XSS_PATTERN = re.compile(
+        r"("  # group start
+        r"<script.*?>|javascript:|onerror\s*=|onload\s*=|onfocus\s*=|onmouseover\s*=|"  # event handlers
+        r"<iframe|<object|<img\s+[^>]*onerror=|<svg[^>]*onload=|<body[^>]*onload=|<input[^>]*onfocus=|"  # elements
+        r"<select[^>]*onfocus="  # select focus
+        r")",
+        re.IGNORECASE,
+    )
     _FILENAME_SAFE = re.compile(r"[^A-Za-z0-9._-]")
     _RESERVED = {"CON", "PRN", "AUX", "NUL"}
 

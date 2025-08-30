@@ -1,14 +1,26 @@
 import { render, screen } from '@testing-library/react'
 import App from './App'
 
-test('renders Fashion AI Platform heading', () => {
+test('renders site brand link', () => {
   render(<App />)
-  const headingElement = screen.getByRole('heading', { name: /Fashion AI Platform/i, level: 1 })
+  const brand = screen.getByRole('link', { name: /AI Closet/i })
+  expect(brand).toBeInTheDocument()
+})
+
+test('renders welcome heading', () => {
+  render(<App />)
+  const headingElement = screen.getByRole('heading', { name: /Welcome/i, level: 1 })
   expect(headingElement).toBeInTheDocument()
 })
 
-test('renders welcome message', () => {
+test('navigates to feature extraction page', () => {
+  window.history.pushState({}, '', '/features')
   render(<App />)
-  const welcomeElement = screen.getByText(/Welcome to Fashion AI Platform/i)
-  expect(welcomeElement).toBeInTheDocument()
+  expect(screen.getByRole('heading', { name: /Feature Extraction/i })).toBeInTheDocument()
+})
+
+test('navigates to login page', () => {
+  window.history.pushState({}, '', '/login')
+  render(<App />)
+  expect(screen.getByRole('heading', { name: /Login/i })).toBeInTheDocument()
 })

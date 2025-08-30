@@ -1,9 +1,28 @@
-"""Minimal security schema stubs after removal of legacy security module.
-These provide just enough structure for existing imports and tests.
-Replace with real validation logic as needed.
+"""Security-related Pydantic schemas with lightweight validation.
+
+These are NOT a full security framework – just enough logic to satisfy
+existing tests for input validation (name/password/email strength etc.).
 """
-from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any, List
+from pydantic import BaseModel, Field, EmailStr, field_validator
+import re
+
+_NAME_REGEX = re.compile(r"^[A-Za-z .,'-]{1,50}$")
+_COMMON_PASSWORDS = {"password", "password1", "password123", "12345678", "qwerty", "letmein"}
+
+def _validate_name(value: str) -> str:
+    if not _NAME_REGEX.match(value):
+        raise ValueError("Name contains invalid characters")
+    return value
+
+def _validate_password(pw: str) -> str:
+    if len(pw) < 8:
+        raise ValueError("Password must be at least 8 characters")
+    if pw.lower() in _COMMON_PASSWORDS:
+        raise ValueError("Password is too common")
+    if not re.search(r"[A-Z]", pw) or not re.search(r"[a-z]", pw) or not re.search(r"[0-9]", pw):
+        raise ValueError("Password must include upper, lower, and digit")
+    return pw
 
 class SecurityAuditLog(BaseModel):
     event_type: str
@@ -49,24 +68,31 @@ class SecureRecommendationFeedback(BaseModel):
 
 # Auth-specific schemas expected by auth API
 class SecureUserCreate(BaseModel):
-    email: str
+    email: EmailStr
     password: str
     first_name: str
     last_name: str
 
+    _validate_first = field_validator("first_name")(lambda cls, v: _validate_name(v))  # type: ignore[arg-type]
+    _validate_last = field_validator("last_name")(lambda cls, v: _validate_name(v))  # type: ignore[arg-type]
+    _validate_pw = field_validator("password")(lambda cls, v: _validate_password(v))  # type: ignore[arg-type]
+
 class SecureUserLogin(BaseModel):
-    email: str
+    email: EmailStr
     password: str
 
 class SecurePasswordReset(BaseModel):
-    email: str
+    email: EmailStr
 
 class SecurePasswordResetConfirm(BaseModel):
     token: str
     new_password: str
 
+    _validate_pw = field_validator("new_password")(lambda cls, v: _validate_password(v))  # type: ignore[arg-type]
+
 __all__ = [
     'SecurityAuditLog',
     'SecureAuthRequest', 'SecureTokenRefresh', 'SecurePasswordResetRequest', 'SecurePasswordResetConfirm',
-    'SecureClothingItemUpload', 'SecureSearchQuery', 'SecureOutfitRequest', 'SecureRecommendationFeedback'
+    'SecureClothingItemUpload', 'SecureSearchQuery', 'SecureOutfitRequest', 'SecureRecommendationFeedback',
+    'SecureUserCreate', 'SecureUserLogin', 'SecurePasswordReset', 'SecurePasswordResetConfirm'
 ]
