@@ -1,30 +1,20 @@
-import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AddItemForm } from '../components/AddItemForm'
+import { useAddClosetItem } from '../hooks/useAddClosetItem'
 import { layoutClasses } from '../utils/layout'
 
 export function AddItemPage() {
   const navigate = useNavigate()
-  const [loading, setLoading] = React.useState(false)
-  const [error, setError] = React.useState<string | null>(null)
+  const addItemMutation = useAddClosetItem()
 
   const handleSubmit = async (data: any) => {
-    setLoading(true)
-    setError(null)
-    
     try {
-      // TODO: Implement actual API call to add item
-      console.log('Adding item:', data)
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
+      await addItemMutation.mutateAsync(data)
       // Navigate back to closet after successful addition
       navigate('/closet')
-    } catch (err: any) {
-      setError(err.message || 'Failed to add item')
-    } finally {
-      setLoading(false)
+    } catch (error) {
+      // Error is handled by the mutation's error state
+      console.error('Failed to add item:', error)
     }
   }
 
@@ -43,8 +33,8 @@ export function AddItemPage() {
       <div className="max-w-2xl">
         <AddItemForm
           onSubmit={handleSubmit}
-          loading={loading}
-          error={error}
+          loading={addItemMutation.isPending}
+          error={addItemMutation.error?.message || null}
         />
       </div>
     </div>

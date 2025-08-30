@@ -9,9 +9,8 @@ export function Layout({ children }: PropsWithChildren) {
         <div className="mx-auto max-w-6xl px-6 h-14 flex items-center justify-between">
           <Link to="/" className="font-semibold tracking-tight">Nomi</Link>
           <nav className="flex items-center gap-6 text-sm">
-            <Link to="/features" className="hover:text-neutral-600 transition-colors">Features</Link>
-            <Link to="/recommendations" className="hover:text-neutral-600 transition-colors">Recommendations</Link>
-            <Link to="/closet" className="hover:text-neutral-600 transition-colors">Closet</Link>
+            <Link to="/closet" className="hover:text-neutral-600 transition-colors">My Closet</Link>
+            <Link to="/recommendations" className="hover:text-neutral-600 transition-colors">Get Outfit Ideas</Link>
             {localStorage.getItem('auth_token') ? (
               <Button
                 variant="outline"

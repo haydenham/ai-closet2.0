@@ -131,7 +131,7 @@ export const AddItemForm: React.FC<AddItemFormProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className={layoutClasses.formField}>
           <label className="block text-sm font-medium text-neutral-700">
-            Brand
+            Brand <span className="text-neutral-500 font-normal">(Optional)</span>
           </label>
           <Input
             type="text"
@@ -144,7 +144,7 @@ export const AddItemForm: React.FC<AddItemFormProps> = ({
 
         <div className={layoutClasses.formField}>
           <label className="block text-sm font-medium text-neutral-700">
-            Size
+            Size <span className="text-neutral-500 font-normal">(Optional)</span>
           </label>
           <select
             value={formData.size}
@@ -163,7 +163,7 @@ export const AddItemForm: React.FC<AddItemFormProps> = ({
       {/* Tags and Notes */}
       <div className={layoutClasses.formField}>
         <label className="block text-sm font-medium text-neutral-700">
-          Tags
+          Tags <span className="text-neutral-500 font-normal">(Optional)</span>
         </label>
         <Input
           type="text"
@@ -179,7 +179,7 @@ export const AddItemForm: React.FC<AddItemFormProps> = ({
 
       <div className={layoutClasses.formField}>
         <label className="block text-sm font-medium text-neutral-700">
-          Notes
+          Notes <span className="text-neutral-500 font-normal">(Optional)</span>
         </label>
         <textarea
           value={formData.notes}
