@@ -1,24 +1,28 @@
 import { PropsWithChildren } from 'react'
 import { Link } from 'react-router-dom'
+import { Button } from './ui'
 
 export function Layout({ children }: PropsWithChildren) {
   return (
     <div className="min-h-screen flex flex-col bg-white text-neutral-900">
       <header className="border-b border-neutral-200">
         <div className="mx-auto max-w-6xl px-6 h-14 flex items-center justify-between">
-          <Link to="/" className="font-semibold tracking-tight">AI Closet</Link>
+          <Link to="/" className="font-semibold tracking-tight">Nomi</Link>
           <nav className="flex items-center gap-6 text-sm">
             <Link to="/features" className="hover:text-neutral-600 transition-colors">Features</Link>
             <Link to="/recommendations" className="hover:text-neutral-600 transition-colors">Recommendations</Link>
             <Link to="/closet" className="hover:text-neutral-600 transition-colors">Closet</Link>
             {localStorage.getItem('auth_token') ? (
-              <button
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => {
                   localStorage.removeItem('auth_token')
                   window.location.href = '/login'
                 }}
-                className="text-xs font-medium px-3 py-1.5 border border-neutral-300 rounded-sm hover:bg-neutral-50 transition-colors"
-              >Logout</button>
+              >
+                Logout
+              </Button>
             ) : (
               <Link to="/login" className="hover:text-neutral-600 transition-colors">Login</Link>
             )}

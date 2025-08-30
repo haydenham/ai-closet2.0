@@ -3,7 +3,7 @@ import App from './App'
 
 test('renders site brand link', () => {
   render(<App />)
-  const brand = screen.getByRole('link', { name: /AI Closet/i })
+  const brand = screen.getByRole('link', { name: /Nomi/i })
   expect(brand).toBeInTheDocument()
 })
 

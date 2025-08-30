@@ -1,5 +1,8 @@
 import { useState } from 'react'
 import { useFeatureExtraction } from '../hooks/useFeatureExtraction'
+import { Button, Spinner } from '../components/ui'
+import { ErrorMessage } from '../components/ui/Alert'
+import { layoutClasses } from '../utils/layout'
 
 export function FeatureExtractionPage() {
   const [urls, setUrls] = useState('')
@@ -12,35 +15,39 @@ export function FeatureExtractionPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className={layoutClasses.pageContainer}>
       <h1 className="text-xl font-semibold tracking-tight">Feature Extraction</h1>
       <form onSubmit={onSubmit} className="space-y-4 max-w-xl">
-        <div className="space-y-2">
+        <div className={layoutClasses.formField}>
           <label className="block text-sm font-medium">Image URLs (one per line)</label>
           <textarea
             value={urls}
             onChange={e => setUrls(e.target.value)}
             className="w-full border border-neutral-300 rounded-sm px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-neutral-500 focus:border-neutral-500 resize-y min-h-[140px]"
-            placeholder="https://example.com/image1.jpg\nhttps://example.com/image2.jpg"
+            placeholder="https://example.com/image1.jpg&#10;https://example.com/image2.jpg"
           />
         </div>
-        <button
+        <Button
           type="submit"
           disabled={mutation.isPending}
-          className="h-9 px-4 rounded-sm bg-neutral-900 text-white text-sm font-medium tracking-tight disabled:opacity-40 disabled:cursor-not-allowed hover:bg-neutral-800 transition-colors"
         >
-          {mutation.isPending ? 'Extracting…' : 'Extract Features'}
-        </button>
+          {mutation.isPending ? (
+            <div className={layoutClasses.inlineGroup}>
+              <Spinner size="sm" />
+              Extracting…
+            </div>
+          ) : (
+            'Extract Features'
+          )}
+        </Button>
       </form>
-      {mutation.isError && (
-        <div className="text-sm text-red-600">{mutation.error.message}</div>
-      )}
+      <ErrorMessage error={mutation.error?.message} />
       {mutation.isSuccess && (
-        <div className="space-y-4">
+        <div className={layoutClasses.section}>
           <h2 className="text-sm font-medium uppercase tracking-wide text-neutral-500">Results</h2>
-          <ul className="space-y-3 text-sm">
+          <ul className={layoutClasses.listVertical + ' text-sm'}>
             {mutation.data.map(item => (
-              <li key={item.item_id} className="border border-neutral-200 rounded-sm p-3">
+              <li key={item.item_id} className={layoutClasses.cardSmall}>
                 <div className="font-medium mb-1">{item.item_id}</div>
                 <pre className="text-xs bg-neutral-50 p-2 rounded overflow-x-auto">{JSON.stringify(item.features, null, 2)}</pre>
               </li>

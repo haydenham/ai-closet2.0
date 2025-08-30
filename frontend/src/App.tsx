@@ -2,7 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Layout } from './components/Layout'
 import { ProtectedRoute } from './components/ProtectedRoute'
-import { HomePage, FeatureExtractionPage, LoginPage, RecommendationsPage, ClosetPage } from './pages'
+import { HomePage, FeatureExtractionPage, LoginPage, RecommendationsPage, ClosetPage, AddItemPage } from './pages'
 
 const queryClient = new QueryClient()
 
@@ -17,6 +17,7 @@ function App() {
             <Route path="/features" element={<FeatureExtractionPage />} />
             <Route path="/recommendations" element={<ProtectedRoute><RecommendationsPage /></ProtectedRoute>} />
             <Route path="/closet" element={<ProtectedRoute><ClosetPage /></ProtectedRoute>} />
+            <Route path="/closet/add" element={<ProtectedRoute><AddItemPage /></ProtectedRoute>} />
           </Routes>
         </Layout>
       </Router>

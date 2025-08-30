@@ -1,5 +1,8 @@
 import { useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
+import { Button, Input } from '../components/ui'
+import { ErrorMessage } from '../components/ui/Alert'
+import { layoutClasses } from '../utils/layout'
 
 export function LoginPage() {
   const [email, setEmail] = useState('')
@@ -19,37 +22,37 @@ export function LoginPage() {
   return (
     <div className="max-w-sm">
       <h1 className="text-xl font-semibold tracking-tight mb-6">Login</h1>
-      <form onSubmit={onSubmit} className="space-y-4">
-        <div className="space-y-2">
+      <form onSubmit={onSubmit} className={layoutClasses.form}>
+        <div className={layoutClasses.formField}>
           <label className="block text-sm font-medium">Email</label>
-          <input
+          <Input
             type="email"
             value={email}
             onChange={e => setEmail(e.target.value)}
-            className="w-full border border-neutral-300 rounded-sm px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-neutral-500 focus:border-neutral-500"
             placeholder="you@example.com"
             autoComplete="email"
+            variant={error ? 'error' : 'default'}
           />
         </div>
-        <div className="space-y-2">
+        <div className={layoutClasses.formField}>
           <label className="block text-sm font-medium">Password</label>
-          <input
+          <Input
             type="password"
             value={password}
             onChange={e => setPassword(e.target.value)}
-            className="w-full border border-neutral-300 rounded-sm px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-neutral-500 focus:border-neutral-500"
             placeholder="••••••••"
             autoComplete="current-password"
+            variant={error ? 'error' : 'default'}
           />
         </div>
-  {error && <div className="text-sm text-red-600">{error}</div>}
-        <button
+        <ErrorMessage error={error} />
+        <Button
           type="submit"
-            disabled={loading}
-          className="h-9 px-4 rounded-sm bg-neutral-900 text-white text-sm font-medium tracking-tight disabled:opacity-40 disabled:cursor-not-allowed hover:bg-neutral-800 transition-colors w-full"
+          disabled={loading}
+          className="w-full"
         >
           {loading ? 'Signing in…' : 'Sign In'}
-        </button>
+        </Button>
       </form>
     </div>
   )
