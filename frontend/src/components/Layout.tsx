@@ -23,7 +23,12 @@ export function Layout({ children }: PropsWithChildren) {
                 Logout
               </Button>
             ) : (
-              <Link to="/login" className="hover:text-neutral-600 transition-colors">Login</Link>
+              <div className="flex items-center gap-4">
+                <Link to="/login" className="hover:text-neutral-600 transition-colors">Login</Link>
+                <Link to="/register">
+                  <Button variant="outline" size="sm">Sign Up</Button>
+                </Link>
+              </div>
             )}
           </nav>
         </div>

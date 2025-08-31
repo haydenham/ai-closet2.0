@@ -22,7 +22,7 @@ class ScheduledLearningService:
     
     def __init__(self):
         # Create separate database session for scheduled tasks
-        self.engine = create_engine(settings.DATABASE_URL)
+        self.engine = create_engine(settings.database_url)
         self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
         
         # Task scheduling parameters

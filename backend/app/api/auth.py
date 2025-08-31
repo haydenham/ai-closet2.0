@@ -49,19 +49,8 @@ async def register_user(
         HTTPException 500: If user creation fails
     """
     try:
-        # Register user and get verification token
+        # Register user (auto-verified for early version)
         user_response, verification_token = await auth_service.register_user(user_data, db)
-        
-        # Send verification email
-        email_sent = email_service.send_verification_email(
-            email=user_data.email,
-            first_name=user_data.first_name,
-            verification_token=verification_token
-        )
-        
-        if not email_sent:
-            logger.warning(f"Failed to send verification email to {user_data.email}")
-            # Don't fail registration if email sending fails
         
         logger.info(f"User registered successfully: {user_data.email}")
         return user_response
@@ -157,13 +146,6 @@ async def login_user(
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Account is deactivated"
-            )
-        
-        # Check if email is verified
-        if not user.is_verified:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Email address not verified. Please check your email and verify your account."
             )
         
         # Create tokens

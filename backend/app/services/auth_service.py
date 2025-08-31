@@ -112,7 +112,7 @@ class AuthService:
             password_hash=hashed_password,
             first_name=user_data.first_name,
             last_name=user_data.last_name,
-            is_verified=False,
+            is_verified=True,  # Auto-verify for early version
             is_active=True
         )
         

@@ -64,22 +64,7 @@ AsyncSessionLocal = async_sessionmaker(
 
 
 # Connection event handlers for better connection management
-@event.listens_for(sync_engine, "connect")
-def set_sqlite_pragma(dbapi_connection, connection_record):
-    """Set database connection parameters for better performance"""
-    if "postgresql" in settings.database_url:
-        # PostgreSQL specific settings
-        with dbapi_connection.cursor() as cursor:
-            cursor.execute("SET timezone TO 'UTC'")
-
-
-@event.listens_for(async_engine.sync_engine, "connect")
-def set_async_sqlite_pragma(dbapi_connection, connection_record):
-    """Set database connection parameters for async connections"""
-    if "postgresql" in settings.database_url:
-        # PostgreSQL specific settings
-        with dbapi_connection.cursor() as cursor:
-            cursor.execute("SET timezone TO 'UTC'")
+# Note: PostgreSQL timezone is already set to UTC by default in most configurations
 
 
 async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
