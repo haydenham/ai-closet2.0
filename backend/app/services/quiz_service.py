@@ -15,7 +15,8 @@ from app.models.quiz_system import (
     QuizResponse, 
     QuizResponseItem,
     FeatureLearningData, 
-    FeatureCorrelation
+    FeatureCorrelation,
+    StyleAssignmentFeedback
 )
 from app.models.user import User
 
@@ -551,19 +552,24 @@ class QuizResponseService:
         db: Session,
         user_id: uuid.UUID,
         gender: str,
-        selected_items: Dict[str, uuid.UUID],
+        selected_items: Dict[str, str],  # Accept string UUIDs
         weights: Optional[Dict[str, float]] = None
     ) -> QuizResponse:
         """Process a complete quiz submission with enhanced matching algorithm"""
+        # Convert string UUIDs to UUID objects
+        converted_items = {}
+        for category, item_id_str in selected_items.items():
+            converted_items[category] = uuid.UUID(item_id_str)
+        
         # Get selected clothing items
-        item_ids = list(selected_items.values())
+        item_ids = list(converted_items.values())
         items_list = db.query(QuizClothingItem).filter(
             QuizClothingItem.id.in_(item_ids)
         ).all()
         
         # Create items dictionary for enhanced processing
         items_dict = {}
-        for category, item_id in selected_items.items():
+        for category, item_id in converted_items.items():
             item = next((item for item in items_list if item.id == item_id), None)
             items_dict[category] = item
         

@@ -41,9 +41,9 @@ async def lifespan(app: FastAPI):
         await init_database()
         logger.info("Database initialized successfully")
         
-        # Start learning scheduler
-        await start_learning_scheduler()
-        logger.info("Learning scheduler started successfully")
+        # TODO: Temporarily disable learning scheduler due to JSON column issues
+        # await start_learning_scheduler()
+        logger.info("Learning scheduler disabled for development")
     except Exception as e:
         logger.error(f"Failed to initialize application: {e}")
         raise
@@ -53,9 +53,9 @@ async def lifespan(app: FastAPI):
     # Shutdown
     logger.info("Shutting down Fashion AI Platform...")
     try:
-        # Stop learning scheduler
-        stop_learning_scheduler()
-        logger.info("Learning scheduler stopped successfully")
+        # TODO: Re-enable when learning scheduler is fixed
+        # stop_learning_scheduler()
+        logger.info("Learning scheduler was disabled")
         
         await close_database()
         logger.info("Database connections closed successfully")

@@ -92,19 +92,26 @@ class QuizResponseItemCreate(BaseModel):
 class QuizResponseCreate(BaseModel):
     """Schema for creating quiz responses"""
     gender: str = Field(..., pattern="^(male|female)$")
-    selected_items: Dict[str, uuid.UUID] = Field(..., min_length=1)
+    selected_items: Dict[str, str] = Field(..., min_length=1)  # Accept strings, convert internally
     weights: Optional[Dict[str, float]] = None
 
     @field_validator('selected_items')
     @classmethod
     def validate_selected_items(cls, v):
-        """Validate selected items structure"""
+        """Validate selected items structure and convert string UUIDs"""
         required_categories = {'top', 'bottom', 'shoes', 'layering', 'accessory', 'complete_outfit'}
         provided_categories = set(v.keys())
         
         if not required_categories.issubset(provided_categories):
             missing = required_categories - provided_categories
             raise ValueError(f"Missing required categories: {missing}")
+        
+        # Validate that all values are valid UUID strings
+        for category, item_id in v.items():
+            try:
+                uuid.UUID(item_id)
+            except (ValueError, TypeError):
+                raise ValueError(f"Invalid UUID format for {category}: {item_id}")
         
         return v
 

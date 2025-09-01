@@ -28,11 +28,14 @@ class GCPStorageService:
             raise ImportError("Google Cloud Storage dependencies not available")
             
         self.client = storage.Client()
-        self.images_bucket_name = settings.gcs_bucket_name or f"{settings.google_cloud_project}-fashion-ai-images"
-        self.uploads_bucket_name = f"{settings.google_cloud_project}-fashion-ai-uploads"
+        # Use the configured bucket name for both images and uploads
+        bucket_name = settings.gcs_bucket_name or f"{settings.google_cloud_project}-fashion-ai-uploads"
+        self.images_bucket_name = bucket_name
+        self.uploads_bucket_name = bucket_name
         
-        # Initialize buckets
+        # Initialize buckets (same bucket for both)
         self.images_bucket = self.client.bucket(self.images_bucket_name)
+        self.uploads_bucket = self.client.bucket(self.uploads_bucket_name)
         self.uploads_bucket = self.client.bucket(self.uploads_bucket_name)
     
     def upload_clothing_image(
@@ -157,11 +160,15 @@ class GCPStorageService:
         
         return images
     
-    def _optimize_image(self, file_data: BinaryIO, file_extension: str) -> bytes:
+    def _optimize_image(self, file_data, file_extension: str) -> bytes:
         """
         Optimize image for web delivery
         """
         try:
+            # Convert bytes to BytesIO if necessary
+            if isinstance(file_data, bytes):
+                file_data = io.BytesIO(file_data)
+            
             # Reset file pointer
             file_data.seek(0)
             
@@ -194,8 +201,11 @@ class GCPStorageService:
             
         except Exception:
             # If optimization fails, return original data
-            file_data.seek(0)
-            return file_data.read()
+            if isinstance(file_data, bytes):
+                return file_data
+            else:
+                file_data.seek(0)
+                return file_data.read()
     
     def create_thumbnail(
         self, 

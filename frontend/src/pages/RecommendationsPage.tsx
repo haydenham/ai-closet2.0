@@ -3,29 +3,50 @@ import { Spinner } from '../components/ui'
 import { ErrorMessage } from '../components/ui/Alert'
 import { GenerateRecommendations } from '../components/GenerateRecommendations'
 import { layoutClasses } from '../utils/layout'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { api } from '../api/client'
 
 export function RecommendationsPage() {
   const { data, isLoading, error, refetch } = useRecommendations()
   const [generating, setGenerating] = useState(false)
   const [generateError, setGenerateError] = useState<string | null>(null)
+  const [userStyle, setUserStyle] = useState<string | null>(null)
+
+  // Fetch user's quiz results to get their style
+  useEffect(() => {
+    const fetchUserStyle = async () => {
+      try {
+        const response = await api.get('/quiz/responses/latest')
+        if (response.data?.assigned_category) {
+          setUserStyle(response.data.assigned_category)
+        }
+      } catch (err) {
+        console.log('No quiz results found - user can take quiz to get personalized recommendations')
+      }
+    }
+    fetchUserStyle()
+  }, [])
 
   const handleGenerate = async (request: any) => {
     setGenerating(true)
     setGenerateError(null)
     
     try {
-      // TODO: Implement actual AI recommendation generation
-      console.log('Generating recommendations for:', request)
+      // Call the actual recommendation API
+      const response = await api.post('/outfit-recommendations/generate', {
+        occasion: request.occasion,
+        color_preference: request.color_preference,
+        user_style: userStyle // Include user's style from quiz
+      })
       
-      // Simulate AI processing time
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      console.log('Generated recommendation:', response.data)
       
       // Refresh recommendations after generation
       await refetch()
       
     } catch (err: any) {
-      setGenerateError(err.message || 'Failed to generate recommendations')
+      console.error('Recommendation generation error:', err)
+      setGenerateError(err.response?.data?.detail || err.message || 'Failed to generate recommendations')
     } finally {
       setGenerating(false)
     }
@@ -42,6 +63,7 @@ export function RecommendationsPage() {
         onGenerate={handleGenerate}
         loading={generating}
         error={generateError}
+        userStyle={userStyle}
       />
       
       {/* Existing Recommendations */}

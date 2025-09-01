@@ -10,6 +10,7 @@ export function Layout({ children }: PropsWithChildren) {
           <Link to="/" className="font-semibold tracking-tight">Nomi</Link>
           <nav className="flex items-center gap-6 text-sm">
             <Link to="/closet" className="hover:text-neutral-600 transition-colors">My Closet</Link>
+            <Link to="/quiz" className="hover:text-neutral-600 transition-colors">Style Quiz</Link>
             <Link to="/recommendations" className="hover:text-neutral-600 transition-colors">Get Outfit Ideas</Link>
             {localStorage.getItem('auth_token') ? (
               <Button

@@ -48,18 +48,22 @@ class SecurePasswordResetConfirm(BaseModel):
     new_password: str
 
 class SecureClothingItemUpload(BaseModel):
-    name: str
     category: str
+    category_id: Optional[str] = None
     color: Optional[str] = None
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    brand: Optional[str] = None
+    size: Optional[str] = None
+    description: Optional[str] = None
+    tags: List[str] = Field(default_factory=list)
 
 class SecureSearchQuery(BaseModel):
     query: str
     filters: Dict[str, Any] = Field(default_factory=dict)
 
 class SecureOutfitRequest(BaseModel):
-    user_id: Optional[int] = None
-    preferences: Dict[str, Any] = Field(default_factory=dict)
+    occasion: str
+    color_preference: Optional[str] = None
+    user_style: Optional[str] = None  # From quiz results
 
 class SecureRecommendationFeedback(BaseModel):
     recommendation_id: int

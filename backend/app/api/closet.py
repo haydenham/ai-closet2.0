@@ -2,6 +2,7 @@
 Closet management API endpoints with GCP Vision integration
 """
 import json
+import logging
 import uuid
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query
@@ -27,15 +28,29 @@ from app.services.gcp_storage_service import GCPStorageService
 from app.services.gcp_vision_service import GCPVisionService
 from google.auth.exceptions import DefaultCredentialsError
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/closet", tags=["closet"])
 
 # Initialize services (with error handling for testing / missing credentials)
 try:
     storage_service = GCPStorageService()
     vision_service = GCPVisionService()
-except (ImportError, DefaultCredentialsError, Exception):  # broad: if any cloud init issue just disable for tests
+    logger.info("✅ GCP services initialized successfully")
+except (ImportError, DefaultCredentialsError, Exception) as e:  # broad: if any cloud init issue just disable for tests
+    logger.error(f"❌ GCP services failed to initialize: {str(e)}")
     storage_service = None
     vision_service = None
+
+
+@router.get("/debug/services")
+async def debug_services():
+    """Debug endpoint to check GCP service status"""
+    return {
+        "storage_service": storage_service is not None,
+        "vision_service": vision_service is not None,
+        "storage_type": str(type(storage_service)),
+        "vision_type": str(type(vision_service))
+    }
 
 
 @router.post("/upload", response_model=ClothingItemResponse)
@@ -81,6 +96,7 @@ async def upload_clothing_item(
     
     try:
         # Check if services are available
+        logger.info(f"Service check - storage: {storage_service is not None}, vision: {vision_service is not None}")
         if not storage_service or not vision_service:
             raise HTTPException(status_code=503, detail="GCP services not available")
         
@@ -137,6 +153,9 @@ async def upload_clothing_item(
         
     except Exception as e:
         await db.rollback()
+        import traceback
+        logger.error(f"Upload error: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Failed to upload clothing item: {str(e)}")
 
 

@@ -11,12 +11,20 @@ export function HomePage() {
           Your AI-powered style assistant. Nomi analyzes your wardrobe and creates personalized outfit recommendations for any occasion.
         </p>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
           <div className={layoutClasses.card}>
             <h3 className="font-medium mb-2">📱 Build Your Digital Closet</h3>
             <p className="text-sm text-neutral-600 mb-4">Upload photos of your clothes and let Nomi organize your wardrobe.</p>
             <Link to="/closet">
               <Button variant="outline" size="sm">View My Closet</Button>
+            </Link>
+          </div>
+          
+          <div className={layoutClasses.card}>
+            <h3 className="font-medium mb-2">🎯 Discover Your Style</h3>
+            <p className="text-sm text-neutral-600 mb-4">Take our quiz to get personalized style insights and better recommendations.</p>
+            <Link to="/quiz">
+              <Button variant="outline" size="sm">Take Style Quiz</Button>
             </Link>
           </div>
           
