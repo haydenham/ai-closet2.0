@@ -2,12 +2,15 @@
 Quiz service for managing visual style assessment system
 """
 import uuid
+import logging
 from typing import List, Optional, Dict, Any, Tuple
 from decimal import Decimal
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy import and_, or_, func, desc
 from sqlalchemy.exc import IntegrityError
+
+logger = logging.getLogger(__name__)
 
 from app.models.quiz_system import (
     QuizClothingItem, 
@@ -19,6 +22,7 @@ from app.models.quiz_system import (
     StyleAssignmentFeedback
 )
 from app.models.user import User
+from app.models.style_profile import StyleProfile
 
 
 class QuizClothingItemService:
@@ -264,6 +268,7 @@ class StyleCategoryService:
     ) -> Dict[str, float]:
         """Calculate weighted style scores based on question categories"""
         categories = StyleCategoryService.get_categories_by_gender(db, gender)
+        logger.info(f"Found {len(categories)} categories for gender {gender}")
         
         # Default weights prioritizing complete outfit
         default_weights = {
@@ -328,16 +333,16 @@ class StyleCategoryService:
         if best_score == 0:
             return 0.0
         
-        # Calculate confidence as the relative gap
+        # Calculate confidence as the relative gap (0.0 to 1.0)
         gap = best_score - second_best
-        confidence = min(gap / best_score, 1.0) * 100
+        confidence = min(gap / best_score, 1.0)
         
         # Boost confidence if complete outfit strongly matches
         complete_outfit_item = selected_items.get('complete_outfit')
         if complete_outfit_item and best_score > 60:
-            confidence = min(confidence * 1.2, 100.0)
+            confidence = min(confidence * 1.2, 1.0)
         
-        return round(confidence, 2)
+        return round(confidence, 4)
     
     @staticmethod
     def detect_hybrid_styles(
@@ -366,14 +371,21 @@ class StyleCategoryService:
         weights: Optional[Dict[str, float]] = None
     ) -> Dict[str, Any]:
         """Get comprehensive style assignment with confidence and hybrid detection"""
+        logger.info(f"Getting style assignment for gender: {gender}")
+        
         # Calculate weighted scores
         scores = StyleCategoryService.calculate_weighted_style_scores(
             db, selected_items, gender, weights
         )
         
+        logger.info(f"Calculated scores: {scores}")
+        
         if not scores:
+            logger.warning("No scores calculated, returning default response")
             return {
                 'primary_style': None,
+                'primary_category': None,  # Add missing key
+                'primary_score': 0.0,      # Add missing key
                 'confidence': 0.0,
                 'scores': {},
                 'hybrid_styles': [],
@@ -578,6 +590,8 @@ class QuizResponseService:
             db, items_dict, gender, weights
         )
         
+        logger.info(f"Style assignment result: {style_assignment}")
+        
         # Prepare response data
         assigned_category = style_assignment['primary_style'] or "Unknown"
         assigned_category_id = (
@@ -634,8 +648,93 @@ class QuizResponseService:
         for item in items_list:
             item.increment_selection_count()
         
+        # Create or update StyleProfile for AI recommendations
+        StyleProfileService.create_or_update_from_quiz(
+            db=db,
+            user_id=user_id,
+            quiz_response=response,
+            assigned_category=assigned_category,
+            confidence_score=confidence_score,
+            calculated_scores=calculated_scores,
+            selected_items=items_dict,
+            gender=gender
+        )
+        
         db.commit()
         return response
+
+
+class StyleProfileService:
+    """Service for managing user style profiles based on quiz results"""
+    
+    @staticmethod
+    def get_by_user_id(db: Session, user_id: uuid.UUID) -> Optional[StyleProfile]:
+        """Get StyleProfile for a user"""
+        return db.query(StyleProfile).filter(
+            StyleProfile.user_id == user_id
+        ).first()
+    
+    @staticmethod
+    def create_or_update_from_quiz(
+        db: Session,
+        user_id: uuid.UUID,
+        quiz_response: QuizResponse,
+        assigned_category: str,
+        confidence_score: float,
+        calculated_scores: Dict[str, float],
+        selected_items: Dict[str, QuizClothingItem],
+        gender: str
+    ) -> StyleProfile:
+        """Create or update StyleProfile based on quiz results"""
+        
+        # Check if user already has a style profile
+        existing_profile = db.query(StyleProfile).filter(
+            StyleProfile.user_id == user_id
+        ).first()
+        
+        # Extract style preferences from selected items
+        style_preferences = []
+        for item in selected_items.values():
+            if item and item.features:
+                style_preferences.extend(item.features)
+        
+        # Remove duplicates and filter relevant features
+        style_preferences = list(set(style_preferences))
+        
+        # Create quiz response summary for storage
+        quiz_data = {
+            "quiz_response_id": str(quiz_response.id),
+            "assigned_category": assigned_category,
+            "confidence_score": float(confidence_score),
+            "calculated_scores": calculated_scores,
+            "completed_at": quiz_response.completed_at.isoformat(),
+            "selected_item_features": style_preferences,
+            "gender": gender
+        }
+        
+        if existing_profile:
+            # Update existing profile
+            existing_profile.quiz_responses = quiz_data
+            existing_profile.assigned_model = assigned_category
+            existing_profile.style_preferences = style_preferences
+            existing_profile.updated_at = func.now()
+            
+            db.commit()
+            db.refresh(existing_profile)
+            return existing_profile
+        else:
+            # Create new profile
+            new_profile = StyleProfile(
+                user_id=user_id,
+                quiz_responses=quiz_data,
+                assigned_model=assigned_category,
+                style_preferences=style_preferences
+            )
+            
+            db.add(new_profile)
+            db.commit()
+            db.refresh(new_profile)
+            return new_profile
 
 
 class StyleFeedbackService:

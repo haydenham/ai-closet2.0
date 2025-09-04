@@ -29,7 +29,8 @@ class GCPStorageService:
             
         self.client = storage.Client()
         # Use the configured bucket name for both images and uploads
-        bucket_name = settings.gcs_bucket_name or f"{settings.google_cloud_project}-fashion-ai-uploads"
+        # Default to existing nomi-closet-uploads bucket
+        bucket_name = settings.gcs_bucket_name or "nomi-closet-uploads"
         self.images_bucket_name = bucket_name
         self.uploads_bucket_name = bucket_name
         

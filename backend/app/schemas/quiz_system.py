@@ -152,6 +152,7 @@ class EnhancedQuizResponse(QuizResponse):
     is_hybrid: bool = False
     hybrid_styles: List[str] = []
     primary_score: Optional[float] = None
+    style_message: Optional[str] = None  # User-friendly message about their style
 
 
 class FeatureLearningDataCreate(BaseModel):

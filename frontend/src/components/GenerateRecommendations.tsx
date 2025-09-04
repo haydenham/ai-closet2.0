@@ -5,7 +5,9 @@ import { layoutClasses } from '../utils/layout'
 
 interface RecommendationRequest {
   occasion: string
-  color_preference: string
+  user_request: string
+  color_preference?: string
+  weather: string
 }
 
 interface GenerateRecommendationsProps {
@@ -23,7 +25,9 @@ export const GenerateRecommendations: React.FC<GenerateRecommendationsProps> = (
 }) => {
   const [request, setRequest] = useState<RecommendationRequest>({
     occasion: '',
-    color_preference: ''
+    user_request: '',
+    color_preference: '',
+    weather: 'warm'
   })
 
   const handleInputChange = (field: keyof RecommendationRequest) => (
@@ -37,7 +41,7 @@ export const GenerateRecommendations: React.FC<GenerateRecommendationsProps> = (
     await onGenerate(request)
   }
 
-  const isValid = request.occasion
+  const isValid = request.occasion && request.user_request && request.weather
 
   return (
     <div className={layoutClasses.section}>
@@ -65,6 +69,38 @@ export const GenerateRecommendations: React.FC<GenerateRecommendationsProps> = (
               required
               disabled={loading}
             />
+          </div>
+
+          <div className={layoutClasses.formField}>
+            <label className="block text-sm font-medium text-neutral-700">
+              Describe what you want to wear *
+            </label>
+            <textarea
+              value={request.user_request}
+              onChange={handleInputChange('user_request')}
+              placeholder="e.g., something professional but comfortable, a trendy outfit for brunch, casual and cozy for studying"
+              className="w-full px-3 py-2 border border-neutral-300 rounded-md shadow-sm placeholder-neutral-400 focus:outline-none focus:ring-neutral-500 focus:border-neutral-500 min-h-[80px] resize-y"
+              required
+              disabled={loading}
+            />
+          </div>
+
+          <div className={layoutClasses.formField}>
+            <label className="block text-sm font-medium text-neutral-700">
+              Weather/Temperature *
+            </label>
+            <select
+              value={request.weather}
+              onChange={handleInputChange('weather')}
+              required
+              disabled={loading}
+              className="w-full px-3 py-2 border border-neutral-300 rounded-md shadow-sm focus:outline-none focus:ring-neutral-500 focus:border-neutral-500"
+            >
+              <option value="hot">Hot (80°F+)</option>
+              <option value="warm">Warm (65-80°F)</option>
+              <option value="mild">Mild (50-65°F)</option>
+              <option value="cold">Cold (Below 50°F)</option>
+            </select>
           </div>
 
           <div className={layoutClasses.formField}>

@@ -246,9 +246,9 @@ class QuizResponse(Base):
         nullable=True
     )
     
-    # Algorithm confidence in the assignment
+    # Algorithm confidence in the assignment (0.0 to 1.0)
     confidence_score: Mapped[Optional[Decimal]] = mapped_column(
-        DECIMAL(3, 2),
+        DECIMAL(5, 4),  # Changed to allow values like 0.6562
         nullable=True
     )
     
@@ -352,7 +352,7 @@ class FeatureLearningData(Base):
     )
     
     confidence_score: Mapped[Optional[Decimal]] = mapped_column(
-        DECIMAL(3, 2),
+        DECIMAL(5, 4),  # Changed to allow values like 0.6562
         nullable=True
     )
     

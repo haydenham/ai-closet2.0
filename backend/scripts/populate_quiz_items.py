@@ -15,146 +15,283 @@ from app.services.quiz_service import QuizClothingItemService, StyleCategoryServ
 def create_sample_clothing_items(db: Session):
     """Create sample clothing items for the quiz"""
     
-    # Sample items for each category
-    sample_items = {
+    # Gender-specific items
+    female_items = {
         'top': [
             {
-                'name': 'Classic White T-Shirt',
-                'features': ['casual', 'versatile', 'cotton', 'crew_neck'],
-                'image_url': 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400&h=400&fit=crop'
-            },
-            {
                 'name': 'Silk Blouse',
-                'features': ['formal', 'elegant', 'silk', 'button_up'],
+                'features': ['elegant', 'silk', 'button_up', 'feminine'],
                 'image_url': 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=400&h=400&fit=crop'
             },
             {
-                'name': 'Striped Long Sleeve',
-                'features': ['casual', 'nautical', 'cotton', 'stripes'],
+                'name': 'Flowing Tank Top',
+                'features': ['casual', 'flowy', 'cotton', 'relaxed'],
                 'image_url': 'https://images.unsplash.com/photo-1571945153237-4929e783af4a?w=400&h=400&fit=crop'
             },
             {
-                'name': 'Cozy Sweater',
-                'features': ['warm', 'casual', 'knit', 'oversized'],
+                'name': 'Cropped Sweater',
+                'features': ['cozy', 'soft', 'knit', 'trendy'],
                 'image_url': 'https://images.unsplash.com/photo-1434389677669-e08b4cac3105?w=400&h=400&fit=crop'
+            },
+            {
+                'name': 'Off-Shoulder Top',
+                'features': ['romantic', 'feminine', 'trendy', 'cotton'],
+                'image_url': 'https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400&h=400&fit=crop'
             }
         ],
         'bottom': [
             {
-                'name': 'Dark Wash Jeans',
-                'features': ['casual', 'denim', 'versatile', 'straight_leg'],
+                'name': 'High-Waisted Jeans',
+                'features': ['trendy', 'flattering', 'denim', 'versatile'],
                 'image_url': 'https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=400&h=400&fit=crop'
             },
             {
-                'name': 'Black Trousers',
-                'features': ['formal', 'professional', 'tailored', 'straight_leg'],
-                'image_url': 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=400&h=400&fit=crop'
-            },
-            {
-                'name': 'Flowy Skirt',
-                'features': ['feminine', 'flowy', 'midi_length', 'chiffon'],
+                'name': 'Flowy Midi Skirt',
+                'features': ['feminine', 'elegant', 'midi_length', 'flowy'],
                 'image_url': 'https://images.unsplash.com/photo-1583496661160-fb5886a13d53?w=400&h=400&fit=crop'
             },
             {
-                'name': 'High-Waisted Shorts',
-                'features': ['casual', 'high_waisted', 'cotton', 'summer'],
+                'name': 'Wide-Leg Trousers',
+                'features': ['sophisticated', 'comfortable', 'professional', 'flowing'],
+                'image_url': 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=400&h=400&fit=crop'
+            },
+            {
+                'name': 'Denim Shorts',
+                'features': ['casual', 'summer', 'high_waisted', 'versatile'],
                 'image_url': 'https://images.unsplash.com/photo-1591195853828-11db59a44f6b?w=400&h=400&fit=crop'
             }
         ],
         'shoes': [
             {
-                'name': 'White Sneakers',
-                'features': ['casual', 'comfortable', 'versatile', 'leather'],
-                'image_url': 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400&h=400&fit=crop'
-            },
-            {
-                'name': 'Black Heels',
-                'features': ['formal', 'elegant', 'pointed_toe', 'leather'],
+                'name': 'Block Heels',
+                'features': ['elegant', 'comfortable', 'versatile', 'leather'],
                 'image_url': 'https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=400&h=400&fit=crop'
             },
             {
-                'name': 'Brown Boots',
-                'features': ['casual', 'leather', 'ankle_height', 'versatile'],
+                'name': 'White Sneakers',
+                'features': ['casual', 'comfortable', 'versatile', 'modern'],
+                'image_url': 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400&h=400&fit=crop'
+            },
+            {
+                'name': 'Ankle Boots',
+                'features': ['edgy', 'versatile', 'leather', 'stylish'],
                 'image_url': 'https://images.unsplash.com/photo-1544966503-7cc5ac882d5f?w=400&h=400&fit=crop'
             },
             {
                 'name': 'Ballet Flats',
-                'features': ['comfortable', 'feminine', 'versatile', 'leather'],
+                'features': ['feminine', 'comfortable', 'classic', 'elegant'],
                 'image_url': 'https://images.unsplash.com/photo-1535043934128-cf0b28d52f95?w=400&h=400&fit=crop'
             }
         ],
         'layering': [
             {
-                'name': 'Denim Jacket',
-                'features': ['casual', 'denim', 'versatile', 'classic'],
-                'image_url': 'https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400&h=400&fit=crop'
-            },
-            {
-                'name': 'Black Blazer',
-                'features': ['formal', 'structured', 'professional', 'versatile'],
+                'name': 'Cropped Blazer',
+                'features': ['structured', 'professional', 'fitted', 'modern'],
                 'image_url': 'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=400&h=400&fit=crop'
             },
             {
-                'name': 'Cardigan',
-                'features': ['cozy', 'soft', 'knit', 'button_up'],
+                'name': 'Knit Cardigan',
+                'features': ['cozy', 'soft', 'oversized', 'comfortable'],
                 'image_url': 'https://images.unsplash.com/photo-1434389677669-e08b4cac3105?w=400&h=400&fit=crop'
             },
             {
+                'name': 'Denim Jacket',
+                'features': ['casual', 'classic', 'versatile', 'timeless'],
+                'image_url': 'https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400&h=400&fit=crop'
+            },
+            {
                 'name': 'Leather Jacket',
-                'features': ['edgy', 'leather', 'modern', 'statement'],
+                'features': ['edgy', 'bold', 'modern', 'statement'],
                 'image_url': 'https://images.unsplash.com/photo-1520975916090-3105956dac38?w=400&h=400&fit=crop'
             }
         ],
         'accessory': [
             {
-                'name': 'Silk Scarf',
-                'features': ['elegant', 'silk', 'pattern', 'versatile'],
-                'image_url': 'https://images.unsplash.com/photo-1601924638867-985c6d427917?w=400&h=400&fit=crop'
-            },
-            {
-                'name': 'Leather Handbag',
-                'features': ['professional', 'leather', 'structured', 'classic'],
-                'image_url': 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&h=400&fit=crop'
-            },
-            {
-                'name': 'Statement Necklace',
-                'features': ['bold', 'statement', 'metal', 'decorative'],
+                'name': 'Statement Earrings',
+                'features': ['bold', 'jewelry', 'decorative', 'feminine'],
                 'image_url': 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=400&h=400&fit=crop'
             },
             {
+                'name': 'Silk Scarf',
+                'features': ['elegant', 'versatile', 'pattern', 'sophisticated'],
+                'image_url': 'https://images.unsplash.com/photo-1601924638867-985c6d427917?w=400&h=400&fit=crop'
+            },
+            {
+                'name': 'Chain Handbag',
+                'features': ['trendy', 'structured', 'elegant', 'versatile'],
+                'image_url': 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&h=400&fit=crop'
+            },
+            {
                 'name': 'Canvas Tote',
-                'features': ['casual', 'canvas', 'practical', 'eco_friendly'],
+                'features': ['casual', 'practical', 'eco_friendly', 'spacious'],
                 'image_url': 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&h=400&fit=crop'
             }
         ],
         'complete_outfit': [
             {
-                'name': 'Business Casual Set',
-                'features': ['professional', 'polished', 'coordinated', 'versatile'],
+                'name': 'Office Chic',
+                'features': ['professional', 'polished', 'coordinated', 'sophisticated'],
                 'image_url': 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=400&h=400&fit=crop'
             },
             {
-                'name': 'Weekend Casual Look',
-                'features': ['relaxed', 'comfortable', 'effortless', 'casual'],
+                'name': 'Boho Casual',
+                'features': ['relaxed', 'flowy', 'artistic', 'comfortable'],
                 'image_url': 'https://images.unsplash.com/photo-1445205170230-053b83016050?w=400&h=400&fit=crop'
             },
             {
-                'name': 'Date Night Outfit',
-                'features': ['elegant', 'romantic', 'stylish', 'sophisticated'],
+                'name': 'Date Night Glam',
+                'features': ['elegant', 'romantic', 'stylish', 'feminine'],
                 'image_url': 'https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=400&h=400&fit=crop'
             },
             {
-                'name': 'Athleisure Set',
-                'features': ['sporty', 'comfortable', 'modern', 'versatile'],
+                'name': 'Weekend Athleisure',
+                'features': ['sporty', 'comfortable', 'modern', 'active'],
+                'image_url': 'https://images.unsplash.com/photo-1506629905607-edb8913e2842?w=400&h=400&fit=crop'
+            }
+        ]
+    }
+
+    male_items = {
+        'top': [
+            {
+                'name': 'Classic White Shirt',
+                'features': ['professional', 'versatile', 'cotton', 'button_down'],
+                'image_url': 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400&h=400&fit=crop'
+            },
+            {
+                'name': 'Henley T-Shirt',
+                'features': ['casual', 'comfortable', 'cotton', 'relaxed'],
+                'image_url': 'https://images.unsplash.com/photo-1571945153237-4929e783af4a?w=400&h=400&fit=crop'
+            },
+            {
+                'name': 'Crew Neck Sweater',
+                'features': ['warm', 'classic', 'knit', 'versatile'],
+                'image_url': 'https://images.unsplash.com/photo-1434389677669-e08b4cac3105?w=400&h=400&fit=crop'
+            },
+            {
+                'name': 'Polo Shirt',
+                'features': ['smart_casual', 'cotton', 'collar', 'sporty'],
+                'image_url': 'https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400&h=400&fit=crop'
+            }
+        ],
+        'bottom': [
+            {
+                'name': 'Dark Wash Jeans',
+                'features': ['casual', 'versatile', 'denim', 'straight_leg'],
+                'image_url': 'https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=400&h=400&fit=crop'
+            },
+            {
+                'name': 'Tailored Chinos',
+                'features': ['smart_casual', 'fitted', 'cotton', 'versatile'],
+                'image_url': 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=400&h=400&fit=crop'
+            },
+            {
+                'name': 'Dress Trousers',
+                'features': ['formal', 'professional', 'tailored', 'wool'],
+                'image_url': 'https://images.unsplash.com/photo-1583496661160-fb5886a13d53?w=400&h=400&fit=crop'
+            },
+            {
+                'name': 'Cargo Shorts',
+                'features': ['casual', 'practical', 'cotton', 'summer'],
+                'image_url': 'https://images.unsplash.com/photo-1591195853828-11db59a44f6b?w=400&h=400&fit=crop'
+            }
+        ],
+        'shoes': [
+            {
+                'name': 'Leather Dress Shoes',
+                'features': ['formal', 'professional', 'leather', 'classic'],
+                'image_url': 'https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=400&h=400&fit=crop'
+            },
+            {
+                'name': 'White Sneakers',
+                'features': ['casual', 'comfortable', 'versatile', 'modern'],
+                'image_url': 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400&h=400&fit=crop'
+            },
+            {
+                'name': 'Desert Boots',
+                'features': ['casual', 'suede', 'versatile', 'comfortable'],
+                'image_url': 'https://images.unsplash.com/photo-1544966503-7cc5ac882d5f?w=400&h=400&fit=crop'
+            },
+            {
+                'name': 'Boat Shoes',
+                'features': ['preppy', 'leather', 'casual', 'classic'],
+                'image_url': 'https://images.unsplash.com/photo-1535043934128-cf0b28d52f95?w=400&h=400&fit=crop'
+            }
+        ],
+        'layering': [
+            {
+                'name': 'Navy Blazer',
+                'features': ['professional', 'versatile', 'structured', 'classic'],
+                'image_url': 'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=400&h=400&fit=crop'
+            },
+            {
+                'name': 'Quarter-Zip Pullover',
+                'features': ['sporty', 'comfortable', 'casual', 'modern'],
+                'image_url': 'https://images.unsplash.com/photo-1434389677669-e08b4cac3105?w=400&h=400&fit=crop'
+            },
+            {
+                'name': 'Bomber Jacket',
+                'features': ['trendy', 'casual', 'modern', 'versatile'],
+                'image_url': 'https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400&h=400&fit=crop'
+            },
+            {
+                'name': 'Leather Jacket',
+                'features': ['edgy', 'bold', 'classic', 'statement'],
+                'image_url': 'https://images.unsplash.com/photo-1520975916090-3105956dac38?w=400&h=400&fit=crop'
+            }
+        ],
+        'accessory': [
+            {
+                'name': 'Classic Watch',
+                'features': ['timeless', 'sophisticated', 'metal', 'professional'],
+                'image_url': 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=400&h=400&fit=crop'
+            },
+            {
+                'name': 'Leather Belt',
+                'features': ['classic', 'versatile', 'leather', 'essential'],
+                'image_url': 'https://images.unsplash.com/photo-1601924638867-985c6d427917?w=400&h=400&fit=crop'
+            },
+            {
+                'name': 'Messenger Bag',
+                'features': ['professional', 'practical', 'leather', 'structured'],
+                'image_url': 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&h=400&fit=crop'
+            },
+            {
+                'name': 'Baseball Cap',
+                'features': ['casual', 'sporty', 'cotton', 'relaxed'],
+                'image_url': 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&h=400&fit=crop'
+            }
+        ],
+        'complete_outfit': [
+            {
+                'name': 'Business Professional',
+                'features': ['formal', 'sophisticated', 'coordinated', 'sharp'],
+                'image_url': 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=400&h=400&fit=crop'
+            },
+            {
+                'name': 'Smart Casual',
+                'features': ['polished', 'relaxed', 'versatile', 'modern'],
+                'image_url': 'https://images.unsplash.com/photo-1445205170230-053b83016050?w=400&h=400&fit=crop'
+            },
+            {
+                'name': 'Weekend Casual',
+                'features': ['comfortable', 'laid_back', 'effortless', 'stylish'],
+                'image_url': 'https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=400&h=400&fit=crop'
+            },
+            {
+                'name': 'Athletic Wear',
+                'features': ['sporty', 'functional', 'comfortable', 'modern'],
                 'image_url': 'https://images.unsplash.com/photo-1506629905607-edb8913e2842?w=400&h=400&fit=crop'
             }
         ]
     }
     
-    # Create items for both male and female
+    # Create items for both genders with appropriate items
     created_items = []
-    for gender in ['male', 'female']:
-        for category, items in sample_items.items():
+    gender_items = {'female': female_items, 'male': male_items}
+    
+    for gender, item_categories in gender_items.items():
+        for category, items in item_categories.items():
             for item_data in items:
                 # Check if item already exists
                 existing = db.query(QuizClothingItem).filter(
@@ -184,54 +321,128 @@ def create_sample_style_categories(db: Session):
     """Create sample style categories"""
     
     style_categories = [
+        # Female categories (10)
         {
-            'name': 'Classic Minimalist',
-            'gender': 'female',
-            'features': ['clean_lines', 'neutral_colors', 'simple', 'timeless'],
-            'description': 'Clean, simple lines with neutral colors and timeless pieces'
+            "name": "bohemian",
+            "description": "Free-spirited style with flowing fabrics and artistic touches",
+            "gender": "female",  # Updated to match database schema
+            "features": ["boho", "flowy", "prints", "crochet", "indie", "artistic", "free-spirited"]
         },
         {
-            'name': 'Romantic Feminine',
-            'gender': 'female', 
-            'features': ['flowy', 'soft', 'feminine', 'delicate'],
-            'description': 'Soft, flowing fabrics with feminine details and romantic touches'
+            "name": "minimalist",
+            "description": "Clean, minimal aesthetic with sophisticated modern touches",
+            "gender": "female",  # Updated to match database schema
+            "features": ["minimal", "modern", "clean", "sophisticated", "neutral", "sleek"]
         },
         {
-            'name': 'Modern Professional',
-            'gender': 'female',
-            'features': ['structured', 'tailored', 'professional', 'polished'],
-            'description': 'Tailored pieces perfect for the modern professional woman'
+            "name": "y2k",
+            "description": "Fashion-forward style with trendy Y2K and statement pieces",
+            "gender": "female",  # Updated to match database schema
+            "features": ["trendy", "y2k", "micro", "baby-tee", "mesh", "bold", "statement"]
         },
         {
-            'name': 'Casual Chic',
-            'gender': 'female',
-            'features': ['effortless', 'relaxed', 'stylish', 'comfortable'],
-            'description': 'Effortlessly stylish pieces that are both comfortable and chic'
-        },
-        # Male categories
-        {
-            'name': 'Classic Gentleman',
-            'gender': 'male',
-            'features': ['tailored', 'classic', 'sophisticated', 'timeless'],
-            'description': 'Timeless, well-tailored pieces for the classic gentleman'
+            "name": "vintage",
+            "description": "Retro-inspired looks with thrifted and vintage aesthetic",
+            "gender": "female",  # Updated to match database schema
+            "features": ["vintage", "thrift", "70s", "90s", "corsets", "mom-jeans", "retro"]
         },
         {
-            'name': 'Modern Casual',
-            'gender': 'male',
-            'features': ['relaxed', 'contemporary', 'versatile', 'comfortable'],
-            'description': 'Contemporary casual wear with a modern edge'
+            "name": "athletic",
+            "description": "Athletic-inspired comfortable wear for active lifestyles",
+            "gender": "female",  # Updated to match database schema
+            "features": ["athletic", "sporty", "comfortable", "activewear", "casual", "performance"]
         },
         {
-            'name': 'Urban Professional',
-            'gender': 'male',
-            'features': ['sharp', 'professional', 'modern', 'polished'],
-            'description': 'Sharp, professional attire for the urban businessman'
+            "name": "classic",
+            "description": "Timeless, refined style with polished and tailored pieces",
+            "gender": "female",  # Updated to match database schema
+            "features": ["elegant", "timeless", "tailored", "refined", "classic", "polished"]
         },
         {
-            'name': 'Relaxed Contemporary',
-            'gender': 'male',
-            'features': ['laid_back', 'modern', 'comfortable', 'stylish'],
-            'description': 'Laid-back yet stylish pieces for everyday wear'
+            "name": "workwear",
+            "description": "Professional style with structured and business-appropriate pieces",
+            "gender": "female",  # Updated to match database schema
+            "features": ["professional", "structured", "business", "formal", "polished", "tailored"]
+        },
+        {
+            "name": "romantic",
+            "description": "Soft, delicate style with romantic details and pretty pastels",
+            "gender": "female",  # Updated to match database schema
+            "features": ["romantic", "feminine", "pastels", "ruffles", "soft", "delicate", "pretty"]
+        },
+        {
+            "name": "preppy",
+            "description": "Collegiate-inspired style with refined traditional elements",
+            "gender": "female",  # Updated to match database schema
+            "features": ["preppy", "collegiate", "polo", "refined", "traditional", "clean"]
+        },
+        {
+            "name": "streetwear",
+            "description": "Urban-inspired style with oversized fits and bold statements",
+            "gender": "female",  # Updated to match database schema
+            "features": ["oversized", "graphic", "sneakers", "urban", "bold", "edgy", "casual"]
+        },
+        
+        # Male categories (10)
+        {
+            "name": "bohemian",
+            "description": "Free-spirited style with artistic and unconventional touches",
+            "gender": "male",  # Updated to match database schema
+            "features": ["boho", "artistic", "unconventional", "flowing", "indie", "creative"]
+        },
+        {
+            "name": "minimalist",
+            "description": "Clean, minimal aesthetic with neutral colors and simple fits",
+            "gender": "male",  # Updated to match database schema
+            "features": ["clean", "minimal", "neutral", "simple", "fitted", "monochrome"]
+        },
+        {
+            "name": "y2k",
+            "description": "Trendy style with Y2K and statement pieces",
+            "gender": "male",  # Updated to match database schema
+            "features": ["trendy", "y2k", "bold", "statement", "modern", "fashion-forward"]
+        },
+        {
+            "name": "vintage",
+            "description": "Nostalgic style with vintage and throwback influences",
+            "gender": "male",  # Updated to match database schema
+            "features": ["vintage", "retro", "70s", "80s", "90s", "nostalgic", "throwback"]
+        },
+        {
+            "name": "athletic",
+            "description": "Athletic-inspired comfortable wear for active lifestyles",
+            "gender": "male",  # Updated to match database schema
+            "features": ["athletic", "sporty", "comfortable", "activewear", "casual", "performance"]
+        },
+        {
+            "name": "classic",
+            "description": "Traditional business and formal wear with structured fits",
+            "gender": "male",  # Updated to match database schema
+            "features": ["tailored", "business", "formal", "structured", "classic", "professional"]
+        },
+        {
+            "name": "workwear",
+            "description": "Rugged, utilitarian style with heritage and workwear influences",
+            "gender": "male",  # Updated to match database schema
+            "features": ["denim", "rugged", "heritage", "workwear", "boots", "utilitarian", "sturdy"]
+        },
+        {
+            "name": "romantic",
+            "description": "Soft, refined style with delicate and sophisticated touches",
+            "gender": "male",  # Updated to match database schema
+            "features": ["soft", "refined", "sophisticated", "delicate", "gentle", "elegant"]
+        },
+        {
+            "name": "preppy",
+            "description": "Collegiate-inspired style with refined traditional elements",
+            "gender": "male",  # Updated to match database schema
+            "features": ["preppy", "collegiate", "polo", "chino", "loafers", "traditional", "refined"]
+        },
+        {
+            "name": "streetwear",
+            "description": "Urban style with oversized fits and graphic elements",
+            "gender": "male",  # Updated to match database schema
+            "features": ["graphic", "oversized", "sneakers", "urban", "bold", "casual", "baggy"]
         }
     ]
     

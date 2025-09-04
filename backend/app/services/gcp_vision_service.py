@@ -207,6 +207,13 @@ class GCPVisionService:
                     features.append(texture)
                     confidence_scores[texture] = label['score']
         
+        # Extract formality level from labels
+        for label in analysis_results['labels']['all_labels']:
+            for formality, keywords in self.formality_keywords.items():
+                if any(keyword in label['description'] for keyword in keywords):
+                    features.append(formality)
+                    confidence_scores[formality] = label['score']
+        
         # Suggest category based on detected objects and labels
         suggested_category = self._suggest_category(analysis_results)
         
@@ -260,7 +267,7 @@ class GCPVisionService:
         elif r < 100 and g > 150 and b > 150:
             return 'cyan'
         else:
-            return 'unknown'
+            return 'brown'
     
     def _suggest_category(self, analysis_results) -> str:
         """Suggest clothing category based on analysis"""

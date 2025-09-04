@@ -170,7 +170,7 @@ class ClothingItem(Base):
     def increment_recommendation_count(self) -> None:
         """Increment the recommendation count and update last recommended time"""
         self.times_recommended += 1
-        self.last_recommended = datetime.utcnow()
+        self.last_recommended = datetime.now()
     
     @property
     def file_extension(self) -> str:

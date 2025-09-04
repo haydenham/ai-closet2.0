@@ -2,6 +2,8 @@
 Quiz system API endpoints
 """
 import uuid
+import logging
+import traceback
 from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
@@ -9,6 +11,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_sync_session
 from app.core.dependencies import get_current_user
 from app.models.user import User
+from app.models.quiz_system import QuizClothingItem as QuizClothingItemModel
 from app.services.quiz_service import (
     QuizClothingItemService,
     StyleCategoryService,
@@ -16,7 +19,7 @@ from app.services.quiz_service import (
     FeatureLearningService
 )
 from app.schemas.quiz_system import (
-    QuizClothingItem,
+    QuizClothingItem as QuizClothingItemSchema,
     QuizClothingItemCreate,
     QuizClothingItemUpdate,
     StyleCategory,
@@ -42,10 +45,11 @@ from app.schemas.quiz_system import (
 )
 
 router = APIRouter(prefix="/quiz", tags=["quiz"])
+logger = logging.getLogger(__name__)
 
 
 # Quiz Taking Endpoints
-@router.get("/clothing-items/{gender}/{category}", response_model=List[QuizClothingItem])
+@router.get("/clothing-items/{gender}/{category}", response_model=List[QuizClothingItemSchema])
 async def get_clothing_items_by_category(
     gender: str,
     category: str,
@@ -99,6 +103,9 @@ async def submit_quiz(
 ):
     """Submit quiz responses and get enhanced style assignment with confidence scoring"""
     try:
+        logger.info(f"Processing quiz submission for user {current_user.id}")
+        logger.debug(f"Quiz data: {quiz_data}")
+        
         response = QuizResponseService.process_complete_quiz(
             db=db,
             user_id=current_user.id,
@@ -107,10 +114,12 @@ async def submit_quiz(
             weights=quiz_data.weights
         )
         
+        logger.info(f"Quiz processed successfully, response ID: {response.id}")
+        
         # Load related data for enhanced response
         item_ids = [uuid.UUID(item_id) for item_id in response.selected_item_ids]
-        selected_items = db.query(QuizClothingItem).filter(
-            QuizClothingItem.id.in_(item_ids)
+        selected_items = db.query(QuizClothingItemModel).filter(
+            QuizClothingItemModel.id.in_(item_ids)
         ).all()
         
         # Extract hybrid style information from calculated_scores
@@ -122,6 +131,11 @@ async def submit_quiz(
         clean_scores = {k: v for k, v in response.calculated_scores.items() if not k.startswith('_')}
         response.calculated_scores = clean_scores
         
+        # Generate user-friendly style message
+        style_message = f"Your preferred style is {response.assigned_category}"
+        confidence_percentage = int(float(response.confidence_score) * 100)
+        style_message += f" (based on your quiz responses with {confidence_percentage}% confidence)"
+        
         # Create enhanced response
         enhanced_response = EnhancedQuizResponse(
             **response.__dict__,
@@ -129,11 +143,15 @@ async def submit_quiz(
             assigned_category_obj=response.assigned_category_obj,
             is_hybrid=is_hybrid,
             hybrid_styles=hybrid_styles,
-            primary_score=primary_score
+            primary_score=primary_score,
+            style_message=style_message
         )
         
+        logger.info(f"Enhanced response created successfully")
         return enhanced_response
     except Exception as e:
+        logger.error(f"Error processing quiz submission for user {current_user.id}: {str(e)}")
+        logger.error(f"Full traceback: {traceback.format_exc()}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error processing quiz: {str(e)}"
@@ -205,7 +223,7 @@ async def submit_style_assignment_feedback(
 
 @router.get("/categories", response_model=List[StyleCategory])
 async def get_style_categories(
-    gender: Optional[str] = Query(None, pattern="^(male|female)$"),
+    gender: Optional[str] = Query(None, pattern="^(men|women)$"),
     db: Session = Depends(get_sync_session)
 ):
     """Get available style categories"""
@@ -213,9 +231,9 @@ async def get_style_categories(
         categories = StyleCategoryService.get_categories_by_gender(db, gender)
     else:
         # Get all categories
-        male_categories = StyleCategoryService.get_categories_by_gender(db, "male")
-        female_categories = StyleCategoryService.get_categories_by_gender(db, "female")
-        categories = male_categories + female_categories
+        men_categories = StyleCategoryService.get_categories_by_gender(db, "men")
+        women_categories = StyleCategoryService.get_categories_by_gender(db, "women")
+        categories = men_categories + women_categories
     
     return categories
 
@@ -242,8 +260,8 @@ async def get_latest_quiz_response(
     
     # Load related data
     item_ids = [uuid.UUID(item_id) for item_id in response.selected_item_ids]
-    selected_items = db.query(QuizClothingItem).filter(
-        QuizClothingItem.id.in_(item_ids)
+    selected_items = db.query(QuizClothingItemModel).filter(
+        QuizClothingItemModel.id.in_(item_ids)
     ).all()
     
     response_dict = response.__dict__.copy()
@@ -254,7 +272,7 @@ async def get_latest_quiz_response(
 
 
 # Admin Endpoints
-@router.post("/admin/clothing-items", response_model=QuizClothingItem)
+@router.post("/admin/clothing-items", response_model=QuizClothingItemSchema)
 async def create_clothing_item(
     item_data: QuizClothingItemCreate,
     current_user: User = Depends(get_current_user),
@@ -273,7 +291,7 @@ async def create_clothing_item(
     return item
 
 
-@router.put("/admin/clothing-items/{item_id}", response_model=QuizClothingItem)
+@router.put("/admin/clothing-items/{item_id}", response_model=QuizClothingItemSchema)
 async def update_clothing_item(
     item_id: uuid.UUID,
     item_data: QuizClothingItemUpdate,

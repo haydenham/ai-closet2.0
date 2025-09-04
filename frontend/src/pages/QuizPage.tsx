@@ -8,12 +8,30 @@ import { layoutClasses } from '../utils/layout'
 const CATEGORIES = ['top', 'bottom', 'shoes', 'layering', 'accessory', 'complete_outfit']
 
 const CATEGORY_LABELS = {
-  top: 'Tops',
-  bottom: 'Bottoms', 
-  shoes: 'Shoes',
-  layering: 'Layering Pieces',
-  accessory: 'Accessories',
-  complete_outfit: 'Complete Outfits'
+  top: {
+    female: 'Tops & Blouses',
+    male: 'Shirts & T-Shirts'
+  },
+  bottom: {
+    female: 'Bottoms & Skirts', 
+    male: 'Pants & Shorts'
+  },
+  shoes: {
+    female: 'Shoes & Heels',
+    male: 'Shoes & Sneakers'
+  },
+  layering: {
+    female: 'Jackets & Cardigans',
+    male: 'Jackets & Blazers'
+  },
+  accessory: {
+    female: 'Accessories & Jewelry',
+    male: 'Accessories & Watches'
+  },
+  complete_outfit: {
+    female: 'Complete Looks',
+    male: 'Complete Outfits'
+  }
 }
 
 export function QuizPage() {
@@ -124,35 +142,62 @@ export function QuizPage() {
             Discover your personal style with our AI-powered quiz. Choose the items that resonate with you!
           </p>
           
-          <div className="space-y-4">
-            <h2 className="text-lg font-medium">What's your gender?</h2>
+          <div className="space-y-6">
+            <h2 className="text-lg font-medium">Choose your style journey</h2>
             
-            <div className="grid grid-cols-2 gap-4">
-              <Button
-                variant="outline" 
-                size="lg"
+            <div className="grid grid-cols-1 gap-6">
+              <div
+                className="border-2 border-neutral-200 rounded-lg p-6 cursor-pointer transition-all duration-200 hover:border-neutral-300 hover:shadow-md"
                 onClick={() => handleGenderSelect('female')}
-                disabled={loading}
-                className="h-20"
               >
-                Female
-              </Button>
-              <Button
-                variant="outline"
-                size="lg" 
+                <div className="text-4xl mb-3">👗</div>
+                <h3 className="font-semibold text-lg mb-2">Women's Style Quiz</h3>
+                <p className="text-sm text-neutral-600">
+                  Explore feminine fashion categories including dresses, blouses, accessories, and complete looks
+                </p>
+                <Button
+                  variant="outline" 
+                  size="sm"
+                  disabled={loading}
+                  className="mt-4"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleGenderSelect('female')
+                  }}
+                >
+                  Start Women's Quiz
+                </Button>
+              </div>
+              
+              <div
+                className="border-2 border-neutral-200 rounded-lg p-6 cursor-pointer transition-all duration-200 hover:border-neutral-300 hover:shadow-md"
                 onClick={() => handleGenderSelect('male')}
-                disabled={loading}
-                className="h-20"
               >
-                Male
-              </Button>
+                <div className="text-4xl mb-3">👔</div>
+                <h3 className="font-semibold text-lg mb-2">Men's Style Quiz</h3>
+                <p className="text-sm text-neutral-600">
+                  Discover masculine style preferences including suits, casual wear, accessories, and signature looks
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm" 
+                  disabled={loading}
+                  className="mt-4"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleGenderSelect('male')
+                  }}
+                >
+                  Start Men's Quiz
+                </Button>
+              </div>
             </div>
           </div>
           
-          <ErrorMessage error={error} className="mt-4" />
+          <ErrorMessage error={error} className="mt-6" />
           
           {loading && (
-            <div className="mt-4 text-sm text-neutral-600">
+            <div className="mt-6 text-sm text-neutral-600">
               Loading quiz questions...
             </div>
           )}
@@ -265,7 +310,7 @@ export function QuizPage() {
         {/* Question */}
         <div className="text-center mb-8">
           <h1 className="text-xl font-bold mb-2">
-            Which {CATEGORY_LABELS[currentCategoryName as keyof typeof CATEGORY_LABELS]} do you prefer?
+            Which {CATEGORY_LABELS[currentCategoryName as keyof typeof CATEGORY_LABELS][gender || 'female']} do you prefer?
           </h1>
           <p className="text-neutral-600">Choose the style that resonates with you most</p>
         </div>

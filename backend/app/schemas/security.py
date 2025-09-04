@@ -62,8 +62,9 @@ class SecureSearchQuery(BaseModel):
 
 class SecureOutfitRequest(BaseModel):
     occasion: str
+    user_request: str  # The user's specific request/prompt
     color_preference: Optional[str] = None
-    user_style: Optional[str] = None  # From quiz results
+    weather: str
 
 class SecureRecommendationFeedback(BaseModel):
     recommendation_id: int

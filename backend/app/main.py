@@ -4,6 +4,13 @@ FastAPI main application entry point
 import logging
 from contextlib import asynccontextmanager
 
+# Setup detailed logging first
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+from logging_config import setup_detailed_logging
+setup_detailed_logging()
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import Limiter, _rate_limit_exceeded_handler

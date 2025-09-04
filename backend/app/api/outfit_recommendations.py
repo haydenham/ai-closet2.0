@@ -2,6 +2,7 @@
 API endpoints for outfit recommendations using Gemini AI.
 """
 import logging
+from datetime import datetime
 from typing import Dict, Any, List, Optional
 from fastapi import APIRouter, HTTPException, Depends, status
 from pydantic import BaseModel, Field
@@ -13,6 +14,7 @@ from app.models.user import User
 from app.models.outfit_recommendation import OutfitRecommendation as OutfitRecommendationModel, RecommendationFeedback
 from app.services.gemini_service import gemini_service, OutfitRecommendation
 from app.services.outfit_matching_service import get_outfit_matching_service
+from app.services.quiz_service import StyleProfileService
 from app.schemas.outfit_recommendation import (
     OutfitRecommendationCreate, OutfitRecommendationResponse, 
     RecommendationFeedbackResponse,
@@ -43,27 +45,62 @@ async def generate_outfit_recommendation(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Generate outfit recommendation using Gemini AI.
+    Generate outfit recommendation using Gemini AI with user's StyleProfile data.
     
-    This endpoint takes user preferences and generates a personalized outfit
-    recommendation using the Gemini AI model with structured JSON output.
+    This endpoint gets the user's style profile from quiz results and uses that data
+    along with hardcoded weather to generate personalized recommendations.
     """
     try:
         logger.info(f"Generating outfit recommendation for user {current_user.id}")
         
+        # Get user's StyleProfile from quiz results
+        style_profile = StyleProfileService.get_by_user_id(db, current_user.id)
+        
+        if not style_profile:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No style profile found. Please complete the style quiz first to get personalized recommendations."
+            )
+        
+        # Extract data from StyleProfile
+        quiz_data = style_profile.quiz_responses
+        if not quiz_data or not isinstance(quiz_data, dict):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid style profile data. Please retake the style quiz."
+            )
+        
+        # Get gender and style category from quiz results
+        gender = quiz_data.get("gender", "").lower()
+        style_category = quiz_data.get("assigned_category", "")
+        
+        # Hardcode weather as "hot" for now
+        weather = "hot"
+        
+        if not gender or not style_category:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Incomplete style profile data. Please retake the style quiz."
+            )
+        
+        logger.info(f"Using StyleProfile data - Gender: {gender}, Style: {style_category}, Weather: {weather}")
+        
+        # Convert gender format for Gemini API (male/female -> men/women)
+        gemini_gender = gemini_service.convert_gender_for_gemini(gender)
+        
         # Validate inputs
         gemini_service.validate_inputs(
-            gender=request.gender,
-            style=request.style,
-            weather=request.weather,
+            gender=gemini_gender,
+            style=style_category,
+            weather=weather,
             occasion=request.occasion
         )
         
-        # Generate recommendation using Gemini service
+        # Generate recommendation using Gemini service with StyleProfile data
         recommendation = await gemini_service.generate_outfit_recommendation(
-            gender=request.gender,
-            style=request.style,
-            weather=request.weather,
+            gender=gemini_gender,
+            style=style_category,
+            weather=weather,
             occasion=request.occasion,
             user_request=request.user_request
         )
@@ -77,15 +114,18 @@ async def generate_outfit_recommendation(
             success=True,
             recommendation=recommendation_dict,
             request_details={
-                "gender": request.gender,
-                "style": request.style,
-                "weather": request.weather,
+                "gender": gender,
+                "style": style_category,
+                "weather": weather,
                 "occasion": request.occasion,
-                "user_request": request.user_request
+                "user_request": request.user_request,
+                "data_source": "StyleProfile from quiz results"
             },
-            message="Outfit recommendation generated successfully"
+            message="Outfit recommendation generated successfully using your style profile"
         )
         
+    except HTTPException:
+        raise
     except ValueError as e:
         logger.error(f"Validation error: {str(e)}")
         raise HTTPException(
@@ -179,19 +219,55 @@ async def generate_and_match_outfit(
     try:
         logger.info(f"Generating and matching outfit for user {current_user.id}")
         
+        # Get user's style profile from quiz results (same approach as generate_outfit_recommendation)
+        style_profile = StyleProfileService.get_by_user_id(
+            db=db, 
+            user_id=current_user.id
+        )
+        
+        if not style_profile:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No style profile found. Please complete the style quiz first to get personalized recommendations."
+            )
+        
+        # Extract data from StyleProfile
+        quiz_data = style_profile.quiz_responses
+        if not quiz_data or not isinstance(quiz_data, dict):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid style profile data. Please retake the style quiz."
+            )
+        
+        # Get gender and style category from quiz results
+        gender = quiz_data.get("gender", "").lower()
+        style_category = quiz_data.get("assigned_category", "")
+        
+        # Use weather from request
+        weather = request.weather
+        
+        if not gender or not style_category:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Incomplete style profile data. Please retake the style quiz."
+            )
+        
+        # Convert gender format for Gemini API (male/female -> men/women)
+        gemini_gender = gemini_service.convert_gender_for_gemini(gender)
+        
         # Validate inputs
         gemini_service.validate_inputs(
-            gender=request.gender,
-            style=request.style,
-            weather=request.weather,
+            gender=gemini_gender,
+            style=style_category,
+            weather=weather,
             occasion=request.occasion
         )
         
         # Generate AI recommendation
         ai_recommendation = await gemini_service.generate_outfit_recommendation(
-            gender=request.gender,
-            style=request.style,
-            weather=request.weather,
+            gender=gemini_gender,
+            style=style_category,
+            weather=weather,
             occasion=request.occasion,
             user_request=request.user_request
         )
@@ -203,7 +279,7 @@ async def generate_and_match_outfit(
             user=current_user,
             ai_recommendation=ai_recommendation,
             weather=request.weather,
-            style_preference=request.style
+            style_preference=style_category
         )
         
         # Store recommendation in database
@@ -224,23 +300,60 @@ async def generate_and_match_outfit(
         )
         
         # Add matched clothing items to recommendation
+        logger.info("Adding matched clothing items to recommendation")
+        current_time = datetime.utcnow()
+        
         if match_result.top:
-            db_recommendation.add_clothing_item(match_result.top.clothing_item)
+            logger.info(f"Adding top item: {match_result.top.clothing_item.id}")
+            # Use direct relationship instead of the problematic method
+            if match_result.top.clothing_item not in db_recommendation.recommended_items:
+                db_recommendation.recommended_items.append(match_result.top.clothing_item)
+                # Update item stats manually to avoid datetime issues
+                match_result.top.clothing_item.times_recommended += 1
+                match_result.top.clothing_item.last_recommended = current_time
+                
         if match_result.bottom:
-            db_recommendation.add_clothing_item(match_result.bottom.clothing_item)
+            logger.info(f"Adding bottom item: {match_result.bottom.clothing_item.id}")
+            if match_result.bottom.clothing_item not in db_recommendation.recommended_items:
+                db_recommendation.recommended_items.append(match_result.bottom.clothing_item)
+                match_result.bottom.clothing_item.times_recommended += 1
+                match_result.bottom.clothing_item.last_recommended = current_time
+                
         if match_result.shoes:
-            db_recommendation.add_clothing_item(match_result.shoes.clothing_item)
+            logger.info(f"Adding shoes item: {match_result.shoes.clothing_item.id}")
+            if match_result.shoes.clothing_item not in db_recommendation.recommended_items:
+                db_recommendation.recommended_items.append(match_result.shoes.clothing_item)
+                match_result.shoes.clothing_item.times_recommended += 1
+                match_result.shoes.clothing_item.last_recommended = current_time
+                
         if match_result.outerwear:
-            db_recommendation.add_clothing_item(match_result.outerwear.clothing_item)
+            logger.info(f"Adding outerwear item: {match_result.outerwear.clothing_item.id}")
+            if match_result.outerwear.clothing_item not in db_recommendation.recommended_items:
+                db_recommendation.recommended_items.append(match_result.outerwear.clothing_item)
+                match_result.outerwear.clothing_item.times_recommended += 1
+                match_result.outerwear.clothing_item.last_recommended = current_time
+                
         if match_result.accessories:
             for acc in match_result.accessories:
-                db_recommendation.add_clothing_item(acc.clothing_item)
-        
+                logger.info(f"Adding accessory item: {acc.clothing_item.id}")
+                if acc.clothing_item not in db_recommendation.recommended_items:
+                    db_recommendation.recommended_items.append(acc.clothing_item)
+                    acc.clothing_item.times_recommended += 1
+                    acc.clothing_item.last_recommended = current_time
+
+        logger.info(f"Total items added to recommendation: {len(db_recommendation.recommended_items)}")
         db.add(db_recommendation)
-        db.commit()
-        db.refresh(db_recommendation)
         
-        # Build response with both AI recommendation and matched items
+        try:
+            logger.info("Committing recommendation to database")
+            db.commit()
+            db.refresh(db_recommendation)
+            logger.info(f"Successfully saved recommendation with ID: {db_recommendation.id}")
+            logger.info(f"Saved recommendation has {len(db_recommendation.recommended_items)} items")
+        except Exception as e:
+            logger.error(f"Database commit failed: {str(e)}")
+            db.rollback()
+            raise        # Build response with both AI recommendation and matched items
         response = {
             "success": True,
             "recommendation_id": str(db_recommendation.id),
@@ -260,8 +373,8 @@ async def generate_and_match_outfit(
             },
             "missing_categories": match_result.missing_categories or [],
             "request_details": {
-                "gender": request.gender,
-                "style": request.style,
+                "gender": gender,
+                "style": style_category,
                 "weather": request.weather,
                 "occasion": request.occasion,
                 "user_request": request.user_request
