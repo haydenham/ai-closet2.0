@@ -22,7 +22,6 @@ export interface AddItemData {
   color: string
   brand?: string
   size?: string
-  tags: string
   notes?: string
   files: File[]
 }
@@ -69,7 +68,7 @@ export async function addClosetItem(data: AddItemData): Promise<ClosetItem> {
       color: data.color,
       brand: data.brand || null,
       size: data.size || null,
-      tags: data.tags ? data.tags.split(',').map(t => t.trim()) : null,
+      tags: null, // Tags will be auto-generated from description
       description: data.notes || null,
       upload_date: new Date().toISOString()
     }
@@ -90,11 +89,7 @@ export async function addClosetItem(data: AddItemData): Promise<ClosetItem> {
   if (data.size) formData.append('size', data.size)
   if (data.notes) formData.append('description', data.notes)
   
-  // Convert tags to JSON string as expected by backend
-  if (data.tags) {
-    const tagsArray = data.tags.split(',').map(t => t.trim()).filter(Boolean)
-    formData.append('tags', JSON.stringify(tagsArray))
-  }
+  // Tags will be auto-generated from description on the backend
 
   const res = await api.post<ClosetItem>('/closet/upload', formData, {
     headers: {

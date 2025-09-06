@@ -281,3 +281,33 @@ class GCPStorageService:
             return {
                 "error": "Unable to fetch storage statistics"
             }
+    
+    async def delete_file(self, filename: str) -> bool:
+        """
+        Delete a file from Google Cloud Storage
+        
+        Args:
+            filename: The filename to delete from storage
+            
+        Returns:
+            bool: True if deletion was successful, False otherwise
+        """
+        try:
+            # Try to delete from uploads bucket first (where clothing images are stored)
+            blob = self.uploads_bucket.blob(filename)
+            if blob.exists():
+                blob.delete()
+                return True
+            
+            # Also try images bucket in case it's stored there
+            blob = self.images_bucket.blob(filename)
+            if blob.exists():
+                blob.delete()
+                return True
+                
+            # File not found in either bucket
+            return False
+            
+        except Exception as e:
+            print(f"Error deleting file {filename}: {str(e)}")
+            return False

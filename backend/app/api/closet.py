@@ -125,8 +125,21 @@ async def upload_clothing_item(
                 'suggested_category': 'unknown'
             }
         
-        # Merge user-provided tags with extracted features
+        # Merge user-provided tags with extracted features and description keywords
         extracted_features = vision_analysis.get('extracted_features', [])
+        
+        # Extract keywords from description if provided
+        description_features = []
+        if form_data.description:
+            try:
+                # Import the outfit matching service to access description feature extraction
+                from app.services.outfit_matching_service import OutfitMatchingService
+                matching_service = OutfitMatchingService()
+                description_features = list(matching_service._extract_features_from_description(form_data.description))
+                logger.info(f"Extracted {len(description_features)} features from description: {description_features}")
+            except Exception as desc_error:
+                logger.warning(f"Failed to extract features from description: {str(desc_error)}")
+                description_features = []
         
         # Use detected colors if not provided
         final_color = form_data.color
@@ -143,8 +156,8 @@ async def upload_clothing_item(
                 if color.get('color_name') and color.get('color_name') != 'unknown'
             ]
         
-        # Combine all tags: user tags + extracted features + detected colors
-        all_tags = list(set(form_data.tags + extracted_features + detected_colors))
+        # Combine all tags: user tags + extracted features + detected colors + description features
+        all_tags = list(set(form_data.tags + extracted_features + detected_colors + description_features))
         
         # Use suggested category if user didn't provide one or if Vision API has high confidence
         final_category = form_data.category
@@ -646,3 +659,51 @@ async def get_feature_analytics(
             })
     
     return feature_analytics
+
+
+@router.delete("/items/{item_id}")
+async def delete_clothing_item(
+    item_id: str,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user)
+):
+    """Delete a clothing item from the user's closet"""
+    try:
+        # Convert string ID to UUID
+        item_uuid = uuid.UUID(item_id)
+        
+        # Find the clothing item
+        result = await session.execute(
+            select(ClothingItem).where(
+                ClothingItem.id == item_uuid,
+                ClothingItem.user_id == current_user.id
+            )
+        )
+        clothing_item = result.scalar_one_or_none()
+        
+        if not clothing_item:
+            raise HTTPException(status_code=404, detail="Clothing item not found")
+        
+        # Delete from GCP storage if storage service is available
+        if storage_service and clothing_item.filename:
+            try:
+                await storage_service.delete_file(clothing_item.filename)
+                logger.info(f"Deleted file from GCP storage: {clothing_item.filename}")
+            except Exception as e:
+                logger.warning(f"Failed to delete file from GCP storage: {str(e)}")
+                # Continue with database deletion even if storage deletion fails
+        
+        # Delete from database
+        await session.delete(clothing_item)
+        await session.commit()
+        
+        logger.info(f"Successfully deleted clothing item {item_id} for user {current_user.id}")
+        
+        return {"message": "Clothing item deleted successfully", "deleted_item_id": item_id}
+        
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid item ID format")
+    except Exception as e:
+        logger.error(f"Error deleting clothing item {item_id}: {str(e)}")
+        await session.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to delete clothing item: {str(e)}")

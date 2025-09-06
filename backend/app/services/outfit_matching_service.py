@@ -302,7 +302,7 @@ class OutfitMatchingService:
         Returns:
             FeatureMatch with detailed scoring
         """
-        # Get item features from tags and extracted features
+        # Get item features from tags, extracted features, and user descriptions
         item_features = set()
         
         # Add tags as features
@@ -315,6 +315,11 @@ class OutfitMatchingService:
         
         # Add category as feature
         item_features.add(clothing_item.category.lower())
+        
+        # Extract features from user description
+        if clothing_item.description:
+            description_features = self._extract_features_from_description(clothing_item.description)
+            item_features.update(description_features)
         
         # Convert target features to lowercase set
         target_features = set(feature.lower() for feature in target_item.features)
@@ -366,6 +371,98 @@ class OutfitMatchingService:
             color_coordination=color_score,
             style_consistency=style_score
         )
+    
+    def _extract_features_from_description(self, description: str) -> set:
+        """
+        Extract relevant features from user-provided item descriptions
+        
+        Args:
+            description: User's description of the clothing item
+            
+        Returns:
+            Set of extracted features
+        """
+        if not description:
+            return set()
+        
+        description_lower = description.lower()
+        features = set()
+        
+        # Style and occasion keywords
+        style_keywords = {
+            'casual': 'casual', 'formal': 'formal', 'business': 'business', 
+            'professional': 'professional', 'dressy': 'dressy', 'elegant': 'elegant',
+            'sporty': 'sporty', 'athletic': 'athletic', 'trendy': 'trendy',
+            'classic': 'classic', 'vintage': 'vintage', 'modern': 'modern',
+            'bohemian': 'bohemian', 'boho': 'bohemian', 'edgy': 'edgy',
+            'cute': 'cute', 'sexy': 'sexy', 'comfortable': 'comfortable',
+            'cozy': 'cozy', 'chic': 'chic', 'sophisticated': 'sophisticated'
+        }
+        
+        # Material and texture keywords
+        material_keywords = {
+            'cotton': 'cotton', 'silk': 'silk', 'wool': 'wool', 'cashmere': 'cashmere',
+            'linen': 'linen', 'denim': 'denim', 'leather': 'leather', 'suede': 'suede',
+            'polyester': 'polyester', 'nylon': 'nylon', 'spandex': 'stretchy',
+            'fleece': 'fleece', 'velvet': 'velvet', 'satin': 'satin',
+            'soft': 'soft', 'smooth': 'smooth', 'rough': 'textured',
+            'stretchy': 'stretchy', 'thick': 'thick', 'thin': 'thin',
+            'lightweight': 'light', 'heavy': 'heavy'
+        }
+        
+        # Pattern keywords
+        pattern_keywords = {
+            'striped': 'striped', 'stripes': 'striped', 'polka dot': 'polka_dot',
+            'floral': 'floral', 'plaid': 'plaid', 'checkered': 'checkered',
+            'solid': 'solid', 'plain': 'solid', 'patterned': 'patterned',
+            'printed': 'printed', 'geometric': 'geometric'
+        }
+        
+        # Fit keywords
+        fit_keywords = {
+            'tight': 'fitted', 'fitted': 'fitted', 'loose': 'loose', 'baggy': 'loose',
+            'oversized': 'oversized', 'slim': 'slim', 'regular': 'regular',
+            'relaxed': 'relaxed', 'tailored': 'tailored'
+        }
+        
+        # Occasion keywords
+        occasion_keywords = {
+            'work': 'work', 'office': 'work', 'meeting': 'formal',
+            'party': 'party', 'date': 'date', 'wedding': 'wedding',
+            'travel': 'travel', 'vacation': 'vacation', 'beach': 'beach',
+            'gym': 'athletic', 'workout': 'athletic', 'running': 'athletic',
+            'everyday': 'everyday', 'weekend': 'casual'
+        }
+        
+        # Weather keywords
+        weather_keywords = {
+            'summer': 'summer', 'winter': 'winter', 'spring': 'spring', 'fall': 'fall',
+            'hot': 'hot', 'warm': 'warm', 'cool': 'cool', 'cold': 'cold',
+            'sunny': 'sunny', 'rainy': 'rainy', 'windy': 'windy'
+        }
+        
+        # Extract features from all keyword categories
+        all_keywords = {
+            **style_keywords, **material_keywords, **pattern_keywords,
+            **fit_keywords, **occasion_keywords, **weather_keywords
+        }
+        
+        for keyword, feature in all_keywords.items():
+            if keyword in description_lower:
+                features.add(feature)
+        
+        # Extract color mentions (basic color detection)
+        color_keywords = [
+            'red', 'blue', 'green', 'yellow', 'orange', 'purple', 'pink',
+            'black', 'white', 'gray', 'grey', 'brown', 'beige', 'navy',
+            'maroon', 'burgundy', 'teal', 'lime', 'coral', 'lavender'
+        ]
+        
+        for color in color_keywords:
+            if color in description_lower:
+                features.add(color)
+        
+        return features
     
     def _calculate_weather_compatibility(self, item_features: set, weather: str) -> float:
         """Calculate weather compatibility score for an item"""
@@ -567,6 +664,13 @@ class OutfitMatchingService:
         
         if match.matched_features:
             explanations.append(f"Matches {len(match.matched_features)} requested features: {', '.join(match.matched_features[:3])}")
+        
+        # Check if description contributed to the match
+        if match.clothing_item.description:
+            description_features = self._extract_features_from_description(match.clothing_item.description)
+            matched_description_features = set(match.matched_features).intersection(description_features)
+            if matched_description_features:
+                explanations.append(f"Description provided helpful details for matching")
         
         if match.weather_compatibility > 0.8:
             explanations.append("Excellent weather compatibility")

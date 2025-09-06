@@ -9,7 +9,6 @@ interface AddItemFormData {
   color: string
   brand: string
   size: string
-  tags: string
   notes: string
 }
 
@@ -36,7 +35,6 @@ export const AddItemForm: React.FC<AddItemFormProps> = ({
     color: '',
     brand: '',
     size: '',
-    tags: '',
     notes: ''
   })
   const [files, setFiles] = useState<File[]>([])
@@ -160,34 +158,20 @@ export const AddItemForm: React.FC<AddItemFormProps> = ({
         </div>
       </div>
 
-      {/* Tags and Notes */}
       <div className={layoutClasses.formField}>
         <label className="block text-sm font-medium text-neutral-700">
-          Tags <span className="text-neutral-500 font-normal">(Optional)</span>
-        </label>
-        <Input
-          type="text"
-          value={formData.tags}
-          onChange={handleInputChange('tags')}
-          placeholder="e.g., formal, work, summer, casual (comma-separated)"
-          disabled={loading}
-        />
-        <div className="text-xs text-neutral-500 mt-1">
-          Separate multiple tags with commas
-        </div>
-      </div>
-
-      <div className={layoutClasses.formField}>
-        <label className="block text-sm font-medium text-neutral-700">
-          Notes <span className="text-neutral-500 font-normal">(Optional)</span>
+          Description <span className="text-green-600 font-normal">(Helps with better outfit matching!)</span>
         </label>
         <textarea
           value={formData.notes}
           onChange={handleInputChange('notes')}
-          placeholder="Any additional notes about this item..."
+          placeholder="Describe this item in detail: style (casual/formal), material (cotton/silk), fit (loose/fitted), occasions you'd wear it, how it feels, etc. The more detail, the better outfit recommendations you'll get!"
           disabled={loading}
-          className="w-full border border-neutral-300 rounded-sm px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-neutral-500 focus:border-neutral-500 resize-y min-h-[80px]"
+          className="w-full border border-neutral-300 rounded-sm px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-neutral-500 focus:border-neutral-500 resize-y min-h-[120px]"
         />
+        <div className="text-xs text-neutral-500 mt-1">
+          💡 <strong>Tip:</strong> Our AI will automatically extract features from your description - mention style (casual, formal), material (cotton, silk), fit (loose, fitted), and occasions for best results!
+        </div>
       </div>
 
       <ErrorMessage error={error} />
