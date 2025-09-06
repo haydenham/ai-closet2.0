@@ -109,23 +109,48 @@ async def upload_clothing_item(
         )
         
         # Analyze image with GCP Vision API for automatic feature extraction
-        vision_analysis = vision_service.analyze_clothing_image(file_data)
+        logger.info("Starting GCP Vision analysis...")
+        try:
+            vision_analysis = vision_service.analyze_clothing_image(file_data)
+            logger.info(f"Vision analysis completed. Features found: {len(vision_analysis.get('extracted_features', []))}")
+            logger.info(f"Vision analysis result keys: {list(vision_analysis.keys())}")
+        except Exception as vision_error:
+            logger.error(f"Vision API error: {str(vision_error)}")
+            import traceback
+            logger.error(f"Vision API traceback: {traceback.format_exc()}")
+            # Continue with empty analysis if Vision API fails
+            vision_analysis = {
+                'extracted_features': [],
+                'dominant_colors': [],
+                'suggested_category': 'unknown'
+            }
         
         # Merge user-provided tags with extracted features
         extracted_features = vision_analysis.get('extracted_features', [])
-        all_tags = list(set(form_data.tags + extracted_features))
+        
+        # Use detected colors if not provided
+        final_color = form_data.color
+        detected_colors = []
+        if vision_analysis.get('dominant_colors'):
+            # Get the primary color for the color field
+            if not form_data.color:
+                dominant_color = vision_analysis['dominant_colors'][0]
+                final_color = dominant_color.get('color_name', 'unknown')
+            
+            # Add all confident colors to tags
+            detected_colors = [
+                color.get('color_name') for color in vision_analysis['dominant_colors']
+                if color.get('color_name') and color.get('color_name') != 'unknown'
+            ]
+        
+        # Combine all tags: user tags + extracted features + detected colors
+        all_tags = list(set(form_data.tags + extracted_features + detected_colors))
         
         # Use suggested category if user didn't provide one or if Vision API has high confidence
         final_category = form_data.category
         suggested_category = vision_analysis.get('suggested_category', 'unknown')
         if suggested_category != 'unknown' and not form_data.category:
             final_category = suggested_category
-        
-        # Use detected colors if not provided
-        final_color = form_data.color
-        if not form_data.color and vision_analysis.get('dominant_colors'):
-            dominant_color = vision_analysis['dominant_colors'][0]
-            final_color = dominant_color.get('color_name', 'unknown')
         
         # Create clothing item
         clothing_item = ClothingItem(
