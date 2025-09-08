@@ -2,6 +2,7 @@ import { useCloset } from '../hooks/useCloset'
 import { Spinner, Button } from '../components/ui'
 import { ErrorMessage } from '../components/ui/Alert'
 import { layoutClasses } from '../utils/layout'
+import { getCategoryDisplayName } from '../utils/categories'
 import { Link } from 'react-router-dom'
 import { useState } from 'react'
 import { deleteClosetItem, updateClosetItem } from '../api/closet'
@@ -153,7 +154,7 @@ export function ClosetPage() {
                   {isEditing ? (
                     // Edit form
                     <div className="space-y-2">
-                      <div className="text-sm font-medium capitalize tracking-tight">{item.category}</div>
+                      <div className="text-sm font-medium tracking-tight">{getCategoryDisplayName(item.category)}</div>
                       
                       <div className="space-y-2">
                         <input
@@ -211,7 +212,7 @@ export function ClosetPage() {
                     // View mode
                     <>
                       <div className="flex items-center justify-between">
-                        <div className="text-sm font-medium capitalize tracking-tight">{item.category}</div>
+                        <div className="text-sm font-medium tracking-tight">{getCategoryDisplayName(item.category)}</div>
                       </div>
                       <div className={layoutClasses.metadata}>
                         {item.color && <span>{item.color}</span>}

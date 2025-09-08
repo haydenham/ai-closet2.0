@@ -1,5 +1,27 @@
 """
 Feature-based outfit matching service for AI-generated recommendations
+
+🚀 NEW 4-METRIC WEIGHTED SCORING SYSTEM IMPLEMENTED:
+
+1. SEMANTIC FEATURE MAPPING (35%) - Maps AI vocabulary to real clothing descriptors
+   - Addresses core vocabulary mismatch between AI terms and user tags
+   - Uses semantic dictionary to translate terms like "smart-casual" → ["business", "professional", "dressy"]
+   
+2. STYLE CONTEXT CONSISTENCY (25%) - Natural activity context matching  
+   - Combines occasion + description into natural format like "wine bar tasting then a walk"
+   - Matches training data format used for AI model
+   - Evaluates alignment with overall AI style direction
+   
+3. CATEGORY APPROPRIATENESS (20%) - Ensures correct item type for outfit role
+   - Handles category mapping issues (tops/top, bottoms/bottom)
+   - Special handling for versatile items (blazers can be outerwear or tops)
+   
+4. COLOR HARMONY (20%) - Flexible color coordination with AI recommendations
+   - Uses AI color palette from recommendations 
+   - Neutral colors work with everything, earth tones work together
+   - Color family matching for harmonious combinations
+
+This replaces the previous flat scoring system that was causing poor matches.
 """
 import logging
 from typing import Dict, List, Optional, Tuple, Any
@@ -144,6 +166,18 @@ class OutfitMatchingService:
             OutfitMatchResult with matched items and scores
         """
         logger.info(f"Matching outfit for user {user.id} with weather: {weather}")
+        logger.info(f"🤖 AI Recommendation:")
+        if ai_recommendation.top:
+            logger.info(f"   Top: {ai_recommendation.top.type} - {ai_recommendation.top.features}")
+        if ai_recommendation.bottom:
+            logger.info(f"   Bottom: {ai_recommendation.bottom.type} - {ai_recommendation.bottom.features}")
+        if ai_recommendation.shoes:
+            logger.info(f"   Shoes: {ai_recommendation.shoes.type} - {ai_recommendation.shoes.features}")
+        if ai_recommendation.outerwear:
+            logger.info(f"   Outerwear: {ai_recommendation.outerwear.type} - {ai_recommendation.outerwear.features}")
+        if ai_recommendation.accessories:
+            for i, acc in enumerate(ai_recommendation.accessories):
+                logger.info(f"   Accessory {i+1}: {acc.type} - {acc.features}")
         
         # Get user's closet items
         closet_items = db.query(ClothingItem).filter(
@@ -156,60 +190,116 @@ class OutfitMatchingService:
         
         # Group items by category
         items_by_category = self._group_items_by_category(closet_items)
+        logger.info(f"📂 Items grouped by category: {list(items_by_category.keys())}")
+        for category, items in items_by_category.items():
+            logger.info(f"   {category}: {len(items)} items")
         
         # Match each outfit component
         result = OutfitMatchResult()
         result.accessories = []
         
-        # Match top
+        # Match top (handle database category naming mismatch)
         if ai_recommendation.top:
+            # Extract style context from full AI response
+            style_context = self._extract_style_context(
+                ai_recommendation.__dict__, 
+                getattr(ai_recommendation, 'occasion', None),
+                getattr(ai_recommendation, 'description', None)
+            )
+            
+            top_candidates = (items_by_category.get('top', []) + 
+                            items_by_category.get('tops', []))
             result.top = self._find_best_match(
-                items_by_category.get('top', []),
+                top_candidates,
                 ai_recommendation.top,
                 weather,
-                style_preference
+                style_preference,
+                style_context
             )
-        
-        # Match bottom
+
+        # Match bottom (handle database category naming mismatch)
         if ai_recommendation.bottom:
+            # Use same style context for consistency
+            if 'style_context' not in locals():
+                style_context = self._extract_style_context(
+                    ai_recommendation.__dict__, 
+                    getattr(ai_recommendation, 'occasion', None),
+                    getattr(ai_recommendation, 'description', None)
+                )
+            
+            bottom_candidates = (items_by_category.get('bottom', []) + 
+                               items_by_category.get('bottoms', []))
             result.bottom = self._find_best_match(
-                items_by_category.get('bottom', []),
+                bottom_candidates,
                 ai_recommendation.bottom,
                 weather,
-                style_preference
+                style_preference,
+                style_context
             )
-        
+
         # Match shoes
         if ai_recommendation.shoes:
+            # Use same style context for consistency
+            if 'style_context' not in locals():
+                style_context = self._extract_style_context(
+                    ai_recommendation.__dict__, 
+                    getattr(ai_recommendation, 'occasion', None),
+                    getattr(ai_recommendation, 'description', None)
+                )
+            
             result.shoes = self._find_best_match(
                 items_by_category.get('shoes', []),
                 ai_recommendation.shoes,
                 weather,
-                style_preference
+                style_preference,
+                style_context
             )
-        
-        # Match outerwear
+
+        # Match outerwear (handle multiple category options)
         if ai_recommendation.outerwear:
+            # Use same style context for consistency
+            if 'style_context' not in locals():
+                style_context = self._extract_style_context(
+                    ai_recommendation.__dict__, 
+                    getattr(ai_recommendation, 'occasion', None),
+                    getattr(ai_recommendation, 'description', None)
+                )
+            
+            outerwear_candidates = (items_by_category.get('layering', []) + 
+                                  items_by_category.get('outerwear', []) +
+                                  items_by_category.get('formal', []))  # Include formal wear as potential outerwear
             result.outerwear = self._find_best_match(
-                items_by_category.get('layering', []) + items_by_category.get('outerwear', []),
+                outerwear_candidates,
                 ai_recommendation.outerwear,
                 weather,
-                style_preference
+                style_preference,
+                style_context
             )
-        
-        # Match accessories
+
+        # Match accessories (handle multiple category options)
         if ai_recommendation.accessories:
+            # Use same style context for consistency
+            if 'style_context' not in locals():
+                style_context = self._extract_style_context(
+                    ai_recommendation.__dict__, 
+                    getattr(ai_recommendation, 'occasion', None),
+                    getattr(ai_recommendation, 'description', None)
+                )
+            
             for accessory in ai_recommendation.accessories:
+                # Try multiple categories for accessories
+                accessory_candidates = (items_by_category.get('accessory', []) + 
+                                      items_by_category.get('accessories', []) +
+                                      items_by_category.get('formal', []))  # Include formal items as potential accessories
                 match = self._find_best_match(
-                    items_by_category.get('accessory', []),
+                    accessory_candidates,
                     accessory,
                     weather,
-                    style_preference
+                    style_preference,
+                    style_context
                 )
                 if match:
-                    result.accessories.append(match)
-        
-        # Calculate overall scores
+                    result.accessories.append(match)        # Calculate overall scores
         result = self._calculate_overall_scores(result, weather, style_preference)
         
         # Track missing categories for future shopping feature
@@ -248,7 +338,8 @@ class OutfitMatchingService:
         candidate_items: List[ClothingItem],
         target_item: OutfitItem,
         weather: str,
-        style_preference: Optional[str]
+        style_preference: Optional[str],
+        style_context: Optional[Dict[str, Any]] = None
     ) -> Optional[FeatureMatch]:
         """
         Find the best matching item from candidates for a target outfit item
@@ -258,11 +349,19 @@ class OutfitMatchingService:
             target_item: AI-requested outfit item with features
             weather: Weather condition
             style_preference: User's style preference
+            style_context: Enhanced style context from AI recommendation + occasion
             
         Returns:
             Best matching FeatureMatch or None if no suitable match
         """
+        logger.info(f"🔍 Finding best match for {target_item.type}")
+        logger.info(f"   Target features: {target_item.features}")
+        logger.info(f"   Available candidates: {len(candidate_items)}")
+        if style_context:
+            logger.info(f"   Style context: {style_context.get('style_keywords', [])} | Activity: {style_context.get('activity_context', 'N/A')}")
+        
         if not candidate_items:
+            logger.warning(f"   ❌ No candidates available for {target_item.type}")
             return None
         
         best_match = None
@@ -270,34 +369,55 @@ class OutfitMatchingService:
         
         for item in candidate_items:
             match = self._calculate_feature_match(
-                item, target_item, weather, style_preference
+                item, target_item, weather, style_preference, style_context
             )
+            
+            logger.info(f"   📊 Item {str(item.id)[:8]}... ({item.color} {item.category})")
+            logger.info(f"      Tags: {item.tags}")
+            logger.info(f"      🎯 TOTAL SCORE: {match.match_score:.3f}")
+            logger.info(f"      🧠 Semantic Features (35%): {match.style_consistency:.3f}")
+            logger.info(f"      🎨 Style Context (25%): {match.weather_compatibility:.3f}")
+            logger.info(f"      📂 Category Match (20%): N/A")  # Will need to extract this from calculation
+            logger.info(f"      🌈 Color Harmony (20%): {match.color_coordination:.3f}")
+            logger.info(f"      ✅ Matched features: {match.matched_features}")
+            logger.info(f"      ❌ Missing features: {match.missing_features}")
             
             if match.match_score > best_score:
                 best_score = match.match_score
                 best_match = match
         
         # Only return matches above minimum threshold
-        if best_match and best_match.match_score >= 0.3:
+        threshold = 0.3
+        if best_match and best_match.match_score >= threshold:
+            logger.info(f"   ✅ BEST MATCH: {str(best_match.clothing_item.id)[:8]}... (score: {best_match.match_score:.3f})")
             return best_match
-        
-        return None
+        else:
+            logger.warning(f"   ❌ NO MATCH above threshold {threshold}. Best was {best_score:.3f}")
+            return None
     
     def _calculate_feature_match(
         self,
         clothing_item: ClothingItem,
         target_item: OutfitItem,
         weather: str,
-        style_preference: Optional[str]
+        style_preference: Optional[str],
+        style_context: Optional[Dict[str, Any]] = None
     ) -> FeatureMatch:
         """
-        Calculate feature matching score between a clothing item and target features
+        NEW 4-METRIC WEIGHTED SCORING SYSTEM
+        
+        Calculate comprehensive feature matching using:
+        1. Semantic Feature Mapping (35%) - AI features vs item tags with semantic mapping
+        2. Style Context Consistency (25%) - Activity context and AI style elements  
+        3. Category Appropriateness (20%) - Right item type for the category
+        4. Color Harmony (20%) - Color coordination with AI recommendations
         
         Args:
             clothing_item: User's clothing item
             target_item: AI-requested item with features
             weather: Weather condition
             style_preference: User's style preference
+            style_context: Enhanced style context from AI recommendation + occasion
             
         Returns:
             FeatureMatch with detailed scoring
@@ -321,45 +441,42 @@ class OutfitMatchingService:
             description_features = self._extract_features_from_description(clothing_item.description)
             item_features.update(description_features)
         
-        # Convert target features to lowercase set
+        # Get target features from AI recommendation
         target_features = set(feature.lower() for feature in target_item.features)
         
-        # Calculate feature overlap
-        matched_features = list(item_features.intersection(target_features))
-        missing_features = list(target_features - item_features)
+        # ===== METRIC 1: SEMANTIC FEATURE MAPPING (35%) =====
+        semantic_score = self._calculate_semantic_feature_match(item_features, target_features, style_context)
         
-        # Base feature match score
-        if target_features:
-            feature_score = len(matched_features) / len(target_features)
-        else:
-            feature_score = 0.5  # Neutral score if no specific features requested
+        # ===== METRIC 2: STYLE CONTEXT CONSISTENCY (25%) =====
+        style_context_score = self._calculate_style_context_consistency(item_features, style_context) if style_context else 0.6
         
-        # Weather compatibility score
-        weather_score = self._calculate_weather_compatibility(item_features, weather)
+        # ===== METRIC 3: CATEGORY APPROPRIATENESS (20%) =====
+        category_score = self._calculate_category_appropriateness(clothing_item, target_item)
         
-        # Color coordination score (placeholder - will be calculated in context)
-        color_score = 0.8  # Default neutral score
+        # ===== METRIC 4: COLOR HARMONY (20%) =====
+        color_score = self._calculate_ai_color_harmony(clothing_item, target_item, style_context)
         
-        # Style consistency score
-        style_score = self._calculate_style_consistency(item_features, style_preference)
-        
-        # Calculate overall match score with weights
+        # ===== WEIGHTED COMBINATION =====
         weights = {
-            'features': 0.4,
-            'weather': 0.2,
-            'color': 0.2,
-            'style': 0.2
+            'semantic': 0.35,      # Primary: semantic feature matching with AI vocabulary
+            'style_context': 0.25, # Style consistency from AI + natural activity context
+            'category': 0.20,      # Category appropriateness for outfit role
+            'color': 0.20         # Color harmony with AI color palette
         }
         
         overall_score = (
-            feature_score * weights['features'] +
-            weather_score * weights['weather'] +
-            color_score * weights['color'] +
-            style_score * weights['style']
+            semantic_score * weights['semantic'] +
+            style_context_score * weights['style_context'] +
+            category_score * weights['category'] +
+            color_score * weights['color']
         )
         
-        # Confidence score based on number of matched features
-        confidence_score = min(1.0, len(matched_features) / max(1, len(target_features) * 0.7))
+        # Calculate matched/missing features for debugging
+        matched_features = list(item_features.intersection(target_features))
+        missing_features = list(target_features - item_features)
+        
+        # Confidence score based on semantic matching strength
+        confidence_score = min(1.0, semantic_score * 1.2)
         
         return FeatureMatch(
             clothing_item=clothing_item,
@@ -367,9 +484,9 @@ class OutfitMatchingService:
             matched_features=matched_features,
             missing_features=missing_features,
             confidence_score=confidence_score,
-            weather_compatibility=weather_score,
+            weather_compatibility=style_context_score,  # Repurposed for style context
             color_coordination=color_score,
-            style_consistency=style_score
+            style_consistency=semantic_score  # Repurposed for semantic matching
         )
     
     def _extract_features_from_description(self, description: str) -> set:
@@ -463,6 +580,335 @@ class OutfitMatchingService:
                 features.add(color)
         
         return features
+    
+    def _extract_style_context(self, ai_response: Dict, occasion: str = None, description: str = None) -> Dict[str, Any]:
+        """
+        Extract style context primarily from AI recommendation output,
+        with natural activity context combining occasion and description.
+        
+        Based on training data patterns like "wine bar tasting then a walk" or "thrifting downtown then boba".
+        """
+        try:
+            style_context = {
+                'ai_features': set(),
+                'ai_colors': set(), 
+                'ai_types': set(),
+                'activity_context': "",
+                'style_keywords': set()
+            }
+            
+            # Extract features, colors, and types from AI recommendation
+            for category, item_data in ai_response.items():
+                if isinstance(item_data, dict):
+                    # Extract item type
+                    if 'type' in item_data:
+                        style_context['ai_types'].add(item_data['type'])
+                    
+                    # Extract primary and alternative colors
+                    if 'color' in item_data:
+                        style_context['ai_colors'].add(item_data['color'])
+                    if 'color_alternatives' in item_data:
+                        style_context['ai_colors'].update(item_data['color_alternatives'])
+                    
+                    # Extract features (this is the rich context from AI)
+                    if 'features' in item_data and isinstance(item_data['features'], list):
+                        style_context['ai_features'].update(item_data['features'])
+            
+            # Create natural activity description combining occasion and description
+            # This matches training format like "birthday dinner at a buzzy ramen spot"
+            activity_parts = []
+            if occasion and occasion.strip():
+                activity_parts.append(occasion.strip())
+            if description and description.strip():
+                activity_parts.append(description.strip())
+            
+            style_context['activity_context'] = " ".join(activity_parts) if activity_parts else ""
+            
+            # Extract meaningful keywords from the combined activity text
+            if style_context['activity_context']:
+                activity_words = style_context['activity_context'].lower().split()
+                # Filter out common words and keep meaningful style/activity keywords
+                meaningful_words = [word for word in activity_words 
+                                  if len(word) > 3 and word not in {'with', 'then', 'for', 'and', 'the', 'at', 'to', 'in', 'on'}]
+                style_context['style_keywords'].update(meaningful_words)
+            
+            logger.info(f"Style context extracted - AI features: {len(style_context['ai_features'])}, "
+                       f"AI colors: {len(style_context['ai_colors'])}, AI types: {len(style_context['ai_types'])}, "
+                       f"Activity: '{style_context['activity_context'][:80]}{'...' if len(style_context['activity_context']) > 80 else ''}', "
+                       f"Keywords: {style_context['style_keywords']}")
+            
+            return style_context
+            
+        except Exception as e:
+            logger.error(f"Error extracting style context: {str(e)}")
+            return {
+                'ai_features': set(),
+                'ai_colors': set(),
+                'ai_types': set(), 
+                'activity_context': "",
+                'style_keywords': set()
+            }
+    
+    def _calculate_semantic_feature_match(self, item_features: set, target_features: set, style_context: Optional[Dict[str, Any]] = None) -> float:
+        """
+        METRIC 1: Semantic Feature Mapping (35%)
+        
+        Maps AI vocabulary to real clothing descriptors using semantic relationships.
+        Addresses the core issue of vocabulary mismatch between AI and user tags.
+        """
+        if not target_features:
+            return 0.6  # Neutral score if no target features
+        
+        # Semantic mapping dictionary - maps AI terms to common clothing descriptors
+        semantic_mappings = {
+            # Style mappings
+            'smart-casual': ['business', 'professional', 'dressy', 'polished', 'clean'],
+            'evening-ready': ['formal', 'dressy', 'elegant', 'sophisticated', 'fancy'],
+            'polished finish': ['formal', 'dressy', 'business', 'professional', 'clean'],
+            'refined construction': ['quality', 'well-made', 'structured', 'tailored'],
+            'architectural silhouette': ['structured', 'tailored', 'geometric', 'modern'],
+            'artisanal finish': ['handmade', 'unique', 'textured', 'bohemian', 'crafted'],
+            
+            # Texture/material mappings
+            'brushed fleece': ['soft', 'warm', 'cozy', 'comfortable', 'fleece'],
+            'thermal knit': ['warm', 'winter', 'thick', 'insulated', 'cozy'],
+            'moisture-wicking': ['athletic', 'sporty', 'performance', 'activewear'],
+            'breathable fabric': ['summer', 'light', 'airy', 'comfortable', 'cotton'],
+            'quick-dry': ['athletic', 'sporty', 'performance', 'travel'],
+            'water-resistant': ['outdoor', 'practical', 'weather', 'jacket'],
+            
+            # Fit/silhouette mappings
+            'relaxed fit': ['loose', 'comfortable', 'casual', 'oversized'],
+            'tailored fit': ['fitted', 'structured', 'professional', 'sharp'],
+            'wide leg': ['flowy', 'loose', 'palazzo', 'relaxed'],
+            'cropped length': ['short', 'ankle', 'cropped', 'modern'],
+            'longline hem': ['long', 'tunic', 'extended', 'covering'],
+            
+            # Color/aesthetic mappings  
+            'vintage vibe': ['retro', 'classic', 'timeless', 'old-school'],
+            'modern aesthetic': ['contemporary', 'current', 'trendy', 'fresh'],
+            'minimalist': ['simple', 'clean', 'basic', 'unadorned'],
+            'bohemian': ['boho', 'free-spirited', 'artistic', 'flowing'],
+            
+            # Weather mappings
+            'windproof': ['jacket', 'outdoor', 'protective', 'weather'],
+            'insulated fill': ['warm', 'winter', 'puffy', 'insulated', 'down'],
+            'upf-rated': ['sun protection', 'summer', 'outdoor', 'uv'],
+            
+            # Hardware/details mappings
+            'minimal hardware': ['simple', 'clean', 'understated', 'basic'],
+            'contrast stitching': ['detailed', 'accented', 'highlighted', 'decorative'],
+            'utility pockets': ['functional', 'practical', 'cargo', 'multi-pocket'],
+            'zip pocket': ['secure', 'functional', 'detailed', 'practical']
+        }
+        
+        # Calculate direct matches
+        direct_matches = item_features.intersection(target_features)
+        direct_score = len(direct_matches) / len(target_features) if target_features else 0
+        
+        # Calculate semantic matches
+        semantic_matches = 0
+        for target_feature in target_features:
+            if target_feature in semantic_mappings:
+                mapped_terms = set(semantic_mappings[target_feature])
+                if mapped_terms.intersection(item_features):
+                    semantic_matches += 1
+        
+        semantic_score = semantic_matches / len(target_features) if target_features else 0
+        
+        # Combine direct and semantic matching (weighted toward semantic for AI vocabulary)
+        combined_score = (direct_score * 0.3) + (semantic_score * 0.7)
+        
+        return min(1.0, combined_score)
+    
+    def _calculate_style_context_consistency(self, item_features: set, style_context: Optional[Dict[str, Any]]) -> float:
+        """
+        METRIC 2: Style Context Consistency (25%)
+        
+        Evaluates how well the item fits the natural activity context from AI + occasion.
+        Uses the combined activity text like "wine bar tasting then a walk".
+        """
+        if not style_context:
+            return 0.6  # Neutral score if no context
+        
+        context_score = 0.0
+        context_factors = 0
+        
+        # Activity context matching
+        activity_keywords = style_context.get('style_keywords', set())
+        if activity_keywords:
+            activity_matches = len(item_features.intersection(activity_keywords))
+            activity_score = min(1.0, activity_matches / max(1, len(activity_keywords) * 0.3))
+            context_score += activity_score * 0.4
+            context_factors += 0.4
+        
+        # AI features consistency (how well item aligns with overall AI style direction)
+        ai_features = style_context.get('ai_features', set())
+        if ai_features:
+            # Look for style-level alignment rather than exact feature matching
+            style_alignment = self._calculate_style_alignment(item_features, ai_features)
+            context_score += style_alignment * 0.3
+            context_factors += 0.3
+        
+        # AI color palette consistency  
+        ai_colors = style_context.get('ai_colors', set())
+        if ai_colors:
+            color_alignment = self._calculate_color_alignment(item_features, ai_colors)
+            context_score += color_alignment * 0.3
+            context_factors += 0.3
+        
+        # Normalize by actual factors used
+        if context_factors > 0:
+            return context_score / context_factors
+        else:
+            return 0.6  # Neutral if no context available
+    
+    def _calculate_category_appropriateness(self, clothing_item: ClothingItem, target_item: OutfitItem) -> float:
+        """
+        METRIC 3: Category Appropriateness (20%)
+        
+        Ensures the item type is appropriate for the requested outfit role.
+        """
+        # Category matching rules
+        category_mappings = {
+            'top': ['top', 'tops', 'shirt', 'blouse', 'sweater', 'tank', 'tee'],
+            'bottom': ['bottom', 'bottoms', 'pants', 'jeans', 'shorts', 'skirt'],
+            'shoes': ['shoes', 'footwear', 'sneakers', 'boots', 'sandals'],
+            'outerwear': ['jacket', 'coat', 'blazer', 'cardigan', 'hoodie', 'sweater'],
+            'accessory': ['accessory', 'accessories', 'bag', 'hat', 'jewelry', 'belt', 'scarf']
+        }
+        
+        # Get the target category based on clothing item category
+        item_category = clothing_item.category.lower()
+        
+        # Check direct category match first
+        for target_cat, acceptable_cats in category_mappings.items():
+            if item_category in acceptable_cats:
+                return 1.0  # Perfect category match
+        
+        # Type-based matching for edge cases
+        target_type = target_item.type.lower()
+        
+        # Special handling for versatile items
+        if any(word in target_type for word in ['cardigan', 'blazer', 'jacket']):
+            if item_category in ['outerwear', 'layering', 'formal', 'tops']:
+                return 0.9
+        
+        if any(word in target_type for word in ['dress', 'jumpsuit']):
+            if item_category in ['dresses', 'formal', 'tops']:
+                return 0.9
+        
+        # Partial match fallback
+        return 0.4  # Some utility but not ideal category
+    
+    def _calculate_ai_color_harmony(self, clothing_item: ClothingItem, target_item: OutfitItem, style_context: Optional[Dict[str, Any]]) -> float:
+        """
+        METRIC 4: Color Harmony (20%)
+        
+        Evaluates color coordination with AI recommendations using flexible matching.
+        """
+        if not clothing_item.color:
+            return 0.5  # Neutral if no color info
+        
+        item_color = clothing_item.color.lower()
+        
+        # Get AI color palette from style context
+        ai_colors = set()
+        if style_context:
+            ai_colors = style_context.get('ai_colors', set())
+        
+        # Add target item colors
+        if hasattr(target_item, 'color') and target_item.color:
+            ai_colors.add(target_item.color.lower())
+        if hasattr(target_item, 'color_alternatives') and target_item.color_alternatives:
+            ai_colors.update(alt.lower() for alt in target_item.color_alternatives)
+        
+        if not ai_colors:
+            return 0.6  # Neutral if no AI colors available
+        
+        # Direct color match
+        if item_color in ai_colors:
+            return 1.0
+        
+        # Flexible color harmony rules
+        harmony_score = self._calculate_flexible_color_harmony(item_color, ai_colors)
+        
+        return harmony_score
+    
+    def _calculate_style_alignment(self, item_features: set, ai_features: set) -> float:
+        """Helper method for style alignment calculation"""
+        if not ai_features:
+            return 0.5
+        
+        # Look for complementary style themes rather than exact matches
+        style_themes = {
+            'formal': ['business', 'professional', 'dressy', 'elegant', 'polished'],
+            'casual': ['relaxed', 'comfortable', 'everyday', 'easy'],
+            'athletic': ['sporty', 'performance', 'activewear', 'gym'],
+            'bohemian': ['boho', 'artistic', 'free-spirited', 'flowing'],
+            'vintage': ['retro', 'classic', 'timeless', 'old-school']
+        }
+        
+        # Find dominant themes in AI features
+        ai_themes = set()
+        for feature in ai_features:
+            for theme, keywords in style_themes.items():
+                if any(keyword in feature for keyword in keywords):
+                    ai_themes.add(theme)
+        
+        # Find themes in item features
+        item_themes = set()
+        for feature in item_features:
+            for theme, keywords in style_themes.items():
+                if feature in keywords:
+                    item_themes.add(theme)
+        
+        # Calculate theme alignment
+        if ai_themes and item_themes:
+            alignment = len(ai_themes.intersection(item_themes)) / len(ai_themes.union(item_themes))
+            return alignment
+        
+        return 0.5  # Neutral if no clear themes
+    
+    def _calculate_color_alignment(self, item_features: set, ai_colors: set) -> float:
+        """Helper method for color alignment calculation"""
+        # Extract colors from item features
+        item_colors = set()
+        for feature in item_features:
+            if feature in ai_colors:
+                item_colors.add(feature)
+        
+        if ai_colors and item_colors:
+            return len(item_colors) / len(ai_colors)
+        
+        return 0.5  # Neutral if no color overlap
+    
+    def _calculate_flexible_color_harmony(self, item_color: str, ai_colors: set) -> float:
+        """Helper method for flexible color harmony"""
+        # Color harmony rules (simplified for now)
+        neutral_colors = {'black', 'white', 'gray', 'grey', 'beige', 'navy', 'cream'}
+        earth_tones = {'brown', 'tan', 'khaki', 'olive', 'camel', 'rust'}
+        
+        # Neutrals work with everything
+        if item_color in neutral_colors:
+            return 0.8
+        
+        # Earth tones work well together
+        if item_color in earth_tones and any(color in earth_tones for color in ai_colors):
+            return 0.7
+        
+        # Similar color families (this could be expanded with color theory)
+        blues = {'blue', 'navy', 'teal', 'turquoise', 'sky'}
+        reds = {'red', 'burgundy', 'wine', 'crimson', 'coral'}
+        greens = {'green', 'olive', 'forest', 'sage', 'mint'}
+        
+        color_families = [blues, reds, greens, earth_tones, neutral_colors]
+        
+        for family in color_families:
+            if item_color in family and any(color in family for color in ai_colors):
+                return 0.6
+        
+        return 0.3  # Low harmony but not completely incompatible
     
     def _calculate_weather_compatibility(self, item_features: set, weather: str) -> float:
         """Calculate weather compatibility score for an item"""

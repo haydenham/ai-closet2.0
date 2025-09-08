@@ -3,6 +3,7 @@ import { Button, Input } from './ui'
 import { FileUpload, ImagePreview } from './ui/FileUpload'
 import { ErrorMessage } from './ui/Alert'
 import { layoutClasses } from '../utils/layout'
+import { CATEGORIES, CATEGORY_DISPLAY_NAMES } from '../utils/categories'
 
 interface AddItemFormData {
   category: string
@@ -17,11 +18,6 @@ interface AddItemFormProps {
   loading?: boolean
   error?: string | null
 }
-
-const CATEGORIES = [
-  'tops', 'bottoms', 'dresses', 'outerwear', 'shoes', 
-  'accessories', 'underwear', 'activewear', 'formal', 'casual'
-]
 
 const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '28', '30', '32', '34', '36', '38', '6', '7', '8', '9', '10', '11', '12']
 
@@ -105,7 +101,7 @@ export const AddItemForm: React.FC<AddItemFormProps> = ({
             <option value="">Select category</option>
             {CATEGORIES.map(cat => (
               <option key={cat} value={cat}>
-                {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                {CATEGORY_DISPLAY_NAMES[cat]}
               </option>
             ))}
           </select>
