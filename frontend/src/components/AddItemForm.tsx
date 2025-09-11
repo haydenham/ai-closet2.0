@@ -9,7 +9,6 @@ interface AddItemFormData {
   category: string
   color: string
   brand: string
-  size: string
   notes: string
 }
 
@@ -18,8 +17,6 @@ interface AddItemFormProps {
   loading?: boolean
   error?: string | null
 }
-
-const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '28', '30', '32', '34', '36', '38', '6', '7', '8', '9', '10', '11', '12']
 
 export const AddItemForm: React.FC<AddItemFormProps> = ({
   onSubmit,
@@ -30,7 +27,6 @@ export const AddItemForm: React.FC<AddItemFormProps> = ({
     category: '',
     color: '',
     brand: '',
-    size: '',
     notes: ''
   })
   const [files, setFiles] = useState<File[]>([])
@@ -135,38 +131,21 @@ export const AddItemForm: React.FC<AddItemFormProps> = ({
             disabled={loading}
           />
         </div>
-
-        <div className={layoutClasses.formField}>
-          <label className="block text-sm font-medium text-neutral-700">
-            Size <span className="text-neutral-500 font-normal">(Optional)</span>
-          </label>
-          <select
-            value={formData.size}
-            onChange={handleInputChange('size')}
-            disabled={loading}
-            className="w-full border border-neutral-300 rounded-sm px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-neutral-500 focus:border-neutral-500 bg-white"
-          >
-            <option value="">Select size</option>
-            {SIZES.map(size => (
-              <option key={size} value={size}>{size}</option>
-            ))}
-          </select>
-        </div>
       </div>
 
       <div className={layoutClasses.formField}>
         <label className="block text-sm font-medium text-neutral-700">
-          Description <span className="text-green-600 font-normal">(Helps with better outfit matching!)</span>
+          Notes <span className="text-neutral-500 font-normal">(optional)</span>
         </label>
         <textarea
           value={formData.notes}
           onChange={handleInputChange('notes')}
-          placeholder="Describe this item in detail: style (casual/formal), material (cotton/silk), fit (loose/fitted), occasions you'd wear it, how it feels, etc. The more detail, the better outfit recommendations you'll get!"
+          placeholder="Optional personal notes: fit preferences, styling notes, care instructions, etc."
           disabled={loading}
-          className="w-full border border-neutral-300 rounded-sm px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-neutral-500 focus:border-neutral-500 resize-y min-h-[120px]"
+          className="w-full border border-neutral-300 rounded-sm px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-neutral-500 focus:border-neutral-500 resize-y min-h-[80px]"
         />
         <div className="text-xs text-neutral-500 mt-1">
-          💡 <strong>Tip:</strong> Our AI will automatically extract features from your description - mention style (casual, formal), material (cotton, silk), fit (loose, fitted), and occasions for best results!
+          🤖 <strong>AI Analysis:</strong> Our Fashion-CLIP system automatically detects categories, styles, materials, colors, and brands from your image!
         </div>
       </div>
 

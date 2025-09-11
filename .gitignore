@@ -73,9 +73,10 @@ frontend/build/
 *.sqlite
 *.sqlite3
 
-# Uploads
+# Uploads and user data
 backend/uploads/
 uploads/
+backend/test_images/
 
 # Docker
 .dockerignore
@@ -93,3 +94,17 @@ logs/
 # Temporary files
 *.tmp
 *.temp
+
+# AI/ML model cache
+.transformers_cache/
+.cache/huggingface/
+
+# Google Cloud credentials (security)
+**/credentials.json
+**/service-account-key.json
+
+# Development and testing
+*.local
+.pytest_cache/
+.coverage
+htmlcov/

@@ -21,12 +21,6 @@ export function ClosetPage() {
   const [editingItem, setEditingItem] = useState<EditingItem | null>(null)
   const [saving, setSaving] = useState(false)
   
-  // Calculate description stats
-  const itemsWithDescriptions = data?.filter(item => item.description && item.description.trim().length > 0).length || 0
-  const totalItems = data?.length || 0
-  const descriptionPercentage = totalItems > 0 ? Math.round((itemsWithDescriptions / totalItems) * 100) : 0
-  const showDescriptionTip = totalItems > 0 && descriptionPercentage < 70
-  
   const handleDeleteItem = async (itemId: string) => {
     if (!confirm('Are you sure you want to delete this item? This action cannot be undone.')) {
       return
@@ -94,23 +88,6 @@ export function ClosetPage() {
         </Link>
       </div>
       
-      {showDescriptionTip && (
-        <div className="bg-blue-50 border border-blue-200 rounded-sm p-4 mb-4">
-          <div className="flex items-start space-x-3">
-            <div className="text-blue-500 text-lg">🤖</div>
-            <div>
-              <div className="text-sm font-medium text-blue-900">Improve Your Outfit Recommendations</div>
-              <div className="text-sm text-blue-700 mt-1">
-                Only {descriptionPercentage}% of your items have descriptions. Our AI automatically extracts features from descriptions to create better outfit matches!
-              </div>
-              <div className="text-xs text-blue-600 mt-2">
-                <strong>Tip:</strong> Describe style (casual/formal), material, fit, and occasions. We'll automatically generate matching tags from your description.
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-      
       {isLoading && (
         <div className={layoutClasses.inlineGroup + ' text-sm text-neutral-500'}>
           <Spinner size="sm" />
@@ -173,19 +150,12 @@ export function ClosetPage() {
                             placeholder="Brand"
                             className="w-full text-xs px-2 py-1 border border-neutral-300 rounded-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                           />
-                          <input
-                            type="text"
-                            value={editingItem?.size || ''}
-                            onChange={(e) => setEditingItem(prev => prev ? {...prev, size: e.target.value} : null)}
-                            placeholder="Size"
-                            className="w-full text-xs px-2 py-1 border border-neutral-300 rounded-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                          />
                         </div>
                         
                         <textarea
                           value={editingItem?.description || ''}
                           onChange={(e) => setEditingItem(prev => prev ? {...prev, description: e.target.value} : null)}
-                          placeholder="Description (helps with better outfit matching!)"
+                          placeholder="Optional description (personal notes, fit details, etc.)"
                           rows={3}
                           className="w-full text-xs px-2 py-1 border border-neutral-300 rounded-sm focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none"
                         />
@@ -219,20 +189,15 @@ export function ClosetPage() {
                         {item.size && <span>{item.size}</span>}
                         {item.brand && <span>{item.brand}</span>}
                       </div>
-                      {item.description ? (
-                        <div className="text-xs text-neutral-600 bg-green-50 p-2 rounded-sm border border-green-200">
-                          <div className="font-medium text-green-700 mb-1">📝 Description:</div>
+                      {item.description && (
+                        <div className="text-xs text-neutral-600 bg-neutral-50 p-2 rounded-sm border border-neutral-200">
+                          <div className="font-medium text-neutral-700 mb-1">📝 Notes:</div>
                           <div className="line-clamp-2">{item.description}</div>
-                        </div>
-                      ) : (
-                        <div className="text-xs text-amber-600 bg-amber-50 p-2 rounded-sm border border-amber-200">
-                          <div className="font-medium">💡 Add a description</div>
-                          <div>Descriptions help improve outfit matching!</div>
                         </div>
                       )}
                       {item.tags && item.tags.length > 0 && (
                         <div className="pt-1">
-                          <div className="text-xs text-neutral-500 mb-1">🏷️ Auto-generated features:</div>
+                          <div className="text-xs text-neutral-500 mb-1">🤖 AI-detected features:</div>
                           <div className="flex flex-wrap gap-1">
                             {item.tags.slice(0,6).map(t => (
                               <span key={t} className={layoutClasses.badgeSmall}>{t}</span>

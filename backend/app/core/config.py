@@ -44,6 +44,9 @@ class Settings(BaseSettings):
     gcp_location: str = "us-central1"
     gemini_endpoint_id: Optional[str] = "2461079757404504064"
     
+    # Fashion-CLIP Service
+    fashion_clip_url: Optional[str] = "https://fashion-clip-service-950936474638-wzykugaatrca-uc.a.run.app"
+    
     # File Storage
     upload_dir: str = "uploads"
     max_file_size: int = 10 * 1024 * 1024  # 10MB

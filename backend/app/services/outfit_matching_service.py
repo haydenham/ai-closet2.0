@@ -436,10 +436,10 @@ class OutfitMatchingService:
         # Add category as feature
         item_features.add(clothing_item.category.lower())
         
-        # Extract features from user description
-        if clothing_item.description:
-            description_features = self._extract_features_from_description(clothing_item.description)
-            item_features.update(description_features)
+        # DISABLED: Extract features from user description (Fashion-CLIP handles feature extraction now)
+        # if clothing_item.description:
+        #     description_features = self._extract_features_from_description(clothing_item.description)
+        #     item_features.update(description_features)
         
         # Get target features from AI recommendation
         target_features = set(feature.lower() for feature in target_item.features)
@@ -1111,12 +1111,12 @@ class OutfitMatchingService:
         if match.matched_features:
             explanations.append(f"Matches {len(match.matched_features)} requested features: {', '.join(match.matched_features[:3])}")
         
-        # Check if description contributed to the match
-        if match.clothing_item.description:
-            description_features = self._extract_features_from_description(match.clothing_item.description)
-            matched_description_features = set(match.matched_features).intersection(description_features)
-            if matched_description_features:
-                explanations.append(f"Description provided helpful details for matching")
+        # DISABLED: Check if description contributed to the match (now using Fashion-CLIP)
+        # if match.clothing_item.description:
+        #     description_features = self._extract_features_from_description(match.clothing_item.description)
+        #     matched_description_features = set(match.matched_features).intersection(description_features)
+        #     if matched_description_features:
+        #         explanations.append(f"Description provided helpful details for matching")
         
         if match.weather_compatibility > 0.8:
             explanations.append("Excellent weather compatibility")

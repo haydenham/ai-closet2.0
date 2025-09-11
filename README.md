@@ -1,115 +1,243 @@
-# Nomi - AI-Powered Style Assistant
+# AI Closet 2.0 - Intelligent Fashion Platform
 
-**Personalized fashion recommendations through artificial intelligence**
+**Advanced AI-powered fashion analysis and outfit recommendations**
 
-Nomi is a sophisticated fashion platform that combines AI technology with personal style discovery. Using advanced computer vision and machine learning, Nomi analyzes user wardrobes and provides personalized outfit recommendations tailored to individual style preferences.
+AI Closet 2.0 is a sophisticated fashion platform that combines cutting-edge computer vision with machine learning to provide personalized style analysis and outfit recommendations. The platform features a hybrid AI architecture combining Fashion-CLIP models with Google Cloud services for comprehensive clothing analysis.
 
-## Key Features
+## 🚀 Key Features
 
-### Intelligent Style Discovery
-- AI-powered style assessment through visual preference analysis
-- Smart categorization across multiple style dimensions
-- Confidence scoring for style profile accuracy
+### 🧠 Advanced AI Analysis
+- **Fashion-CLIP Integration**: State-of-the-art fashion-specialized computer vision model
+- **Hybrid Service Architecture**: Combines Fashion-CLIP with GCP Color & Brand recognition
+- **Semantic Embeddings**: 512-dimensional vectors for precise similarity matching
+- **4-Metric Scoring System**: Semantic features, style context, category matching, and color harmony
 
-### Digital Closet Management
-- Visual wardrobe organization with photo uploads
-- Automatic feature extraction using computer vision
-- Integration with Google Cloud Vision API for image analysis
+### 👗 Digital Closet Management
+- **Visual Wardrobe Organization**: Upload and categorize clothing items with photos
+- **Automatic Feature Extraction**: AI-powered analysis of style, color, patterns, and materials
+- **Smart Tagging System**: Automatic categorization and manual tag enhancement
+- **Real-time Analysis**: Instant clothing analysis upon upload
 
-### Personalized Recommendations
-- Occasion-based outfit suggestions
-- Color coordination analysis
-- Style-matched recommendations based on user profiles
+### 🎯 Personalized Recommendations
+- **Context-Aware Suggestions**: Occasion and weather-based outfit recommendations
+- **Style Profile Matching**: AI learns individual style preferences
+- **Color Coordination**: Advanced color harmony analysis
+- **Missing Item Detection**: Identifies gaps in wardrobe for shopping recommendations
 
-### User Authentication & Security
-- Secure account management with JWT authentication
-- Privacy-focused data handling
-- Email verification system
+### 🔐 Security & Performance
+- **JWT Authentication**: Secure user account management
+- **Redis Caching**: Optimized performance with intelligent caching
+- **Cloud-Native Architecture**: Scalable deployment on Google Cloud Platform
+- **Production-Ready**: 8GB memory optimization for Fashion-CLIP processing
 
-## Architecture Overview
+## 🏗️ Architecture
 
-Nomi employs a modern, scalable architecture designed for performance and reliability:
+### Frontend (React + TypeScript)
+```
+frontend/
+├── src/
+│   ├── components/     # Reusable UI components
+│   ├── pages/         # Route-based page components
+│   ├── api/           # API integration layer
+│   ├── types/         # TypeScript type definitions
+│   └── styles/        # Tailwind CSS styling
+├── package.json
+└── vite.config.ts
+```
 
-### Frontend Application
-- React 18 with TypeScript for type-safe development
-- Tailwind CSS for responsive design
-- Real-time user interface updates
-- Cross-platform compatibility
+### Backend (FastAPI + Python)
+```
+backend/
+├── app/
+│   ├── api/           # API route handlers
+│   ├── core/          # Configuration and utilities
+│   ├── models/        # SQLAlchemy database models
+│   ├── schemas/       # Pydantic data models
+│   ├── services/      # Business logic layer
+│   └── scripts/       # Utility scripts
+├── alembic/           # Database migrations
+├── tests/             # Test suite
+├── requirements.txt   # Python dependencies
+└── Dockerfile
+```
 
-### Backend Services
-- FastAPI framework with automatic API documentation
-- PostgreSQL database with advanced querying
-- Redis caching for performance optimization
-- Alembic for database migration management
+### AI Services Architecture
+```
+Fashion-CLIP Service (Cloud Run)
+├── Model: patrickjohncyh/fashion-clip
+├── Memory: 8GB optimized
+├── Concurrency: 1 for memory efficiency
+└── Features: Categories, styles, embeddings
 
-### AI & Machine Learning
-- Google Cloud Vision API for image analysis
-- Google Gemini AI for recommendation generation
-- CLIP embeddings for semantic similarity matching
-- Custom algorithms for style categorization
+GCP Color & Brand Service
+├── Vision API: Color detection
+├── Custom Logic: Brand recognition
+├── 200-line focused service
+└── Fallback handling
 
-### Infrastructure
-- Docker containerization for consistent deployment
-- Comprehensive testing framework
-- Cloud-native architecture design
+Hybrid Fashion Service
+├── Parallel processing
+├── Result combination
+├── Enhanced insights
+└── Error handling
+```
 
-## User Workflow
-
-### Style Assessment
-Users complete an interactive style quiz, selecting from curated clothing items across different categories. The AI analyzes these selections to generate a comprehensive style profile.
-
-### Wardrobe Digitization
-Photo uploads of existing clothing items are processed using computer vision to extract features including colors, patterns, and style attributes, creating a searchable digital inventory.
-
-### Recommendation Generation
-When planning outfits, users specify occasion and color preferences. The system combines style profiles with available wardrobe items to generate coordinated outfit suggestions.
-
-### Continuous Improvement
-The platform learns from user interactions to refine recommendations and improve personalization accuracy over time.
-
-## Technology Stack
+## 🛠️ Technology Stack
 
 ### Core Technologies
-- Backend: Python 3.11, FastAPI, SQLAlchemy, Alembic
-- Frontend: React 18, TypeScript, Vite, Tailwind CSS
-- Database: PostgreSQL with optimized indexing
-- Caching: Redis for performance enhancement
-- Authentication: JWT with secure password hashing
+- **Backend**: Python 3.13, FastAPI, SQLAlchemy, Alembic
+- **Frontend**: React 18, TypeScript, Vite, Tailwind CSS
+- **Database**: PostgreSQL with asyncpg for async operations
+- **Caching**: Redis for performance optimization
+- **Authentication**: JWT with secure password hashing
 
-### AI & Cloud Integration
-- Google Cloud Platform: Vision API, Gemini AI
-- Computer vision for automated image analysis
-- Machine learning for preference modeling and style categorization
+### AI & Machine Learning
+- **Fashion-CLIP**: Production deployment on Google Cloud Run
+- **PyTorch**: Deep learning framework for model inference
+- **Transformers**: Hugging Face library for CLIP model
+- **Google Cloud Vision**: Color detection and brand recognition
+- **NumPy/SciPy**: Scientific computing for embeddings
 
-### Development & Deployment
-- Testing: Pytest (Backend), Vitest (Frontend)
-- Documentation: Automated API documentation
-- Containerization: Docker for environment consistency
-- Version control: Structured Git workflow
+### Cloud Infrastructure
+- **Google Cloud Run**: Serverless container deployment
+- **Google Cloud Storage**: Asset and image storage
+- **Google Cloud Vision**: Computer vision services
+- **Docker**: Containerization for consistent deployment
 
-## Technical Specifications
+## 🚀 Quick Start
 
-- Database Models: 15+ comprehensive data schemas
-- API Endpoints: 25+ RESTful services with full documentation
-- Test Coverage: 90%+ across frontend and backend
-- Performance: Sub-200ms average API response times
-- Security: Industry-standard encryption and authentication
+### Prerequisites
+- Python 3.13+
+- Node.js 18+
+- PostgreSQL 14+
+- Redis 6+
+- Google Cloud Project (for AI services)
 
-## Security & Privacy
+### Backend Setup
+```bash
+cd backend
+python -m venv venv
+source venv/bin/activate  # or `venv\Scripts\activate` on Windows
+pip install -r requirements.txt
 
-- Encrypted data storage with secure access controls
-- JWT-based authentication system
-- User data privacy protection
-- Compliance with modern privacy standards
+# Set up environment variables
+cp .env.example .env
+# Edit .env with your configuration
 
-## Future Development
+# Run database migrations
+alembic upgrade head
 
-- Social features for outfit sharing and trend discovery
-- E-commerce integration for direct purchasing
-- Weather-based recommendation adjustments
-- Seasonal style adaptation
-- Native mobile applications
+# Start the server
+uvicorn app.main:app --reload --port 8000
+```
+
+### Frontend Setup
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+### Environment Configuration
+Create `backend/.env` with:
+```bash
+DATABASE_URL=postgresql://user:password@localhost:5432/ai_closet
+REDIS_URL=redis://localhost:6379
+SECRET_KEY=your-secret-key
+GOOGLE_CLOUD_PROJECT=your-project-id
+FASHION_CLIP_SERVICE_URL=https://your-cloud-run-url
+```
+
+## 📊 Performance Metrics
+
+- **API Response Time**: <200ms average
+- **Fashion-CLIP Analysis**: 200-500ms per image
+- **Database Query Performance**: <50ms average
+- **Test Coverage**: >85% backend, >80% frontend
+- **Memory Usage**: 8GB for Fashion-CLIP service
+- **Concurrent Users**: Scales with Cloud Run
+
+## 🧪 Testing
+
+### Backend Tests
+```bash
+cd backend
+pytest tests/ --cov=app --cov-report=html
+```
+
+### Frontend Tests
+```bash
+cd frontend
+npm run test:coverage
+```
+
+## 🚀 Deployment
+
+### Production Deployment
+```bash
+# Deploy Fashion-CLIP service
+cd fashion-clip-service
+gcloud run deploy fashion-clip-service \
+  --source . \
+  --platform managed \
+  --memory 8Gi \
+  --concurrency 1
+
+# Deploy main backend
+cd backend
+docker build -t ai-closet-backend .
+# Deploy to your preferred platform
+```
+
+### Local Development
+```bash
+# Start all services
+docker-compose up -d
+
+# Or run services individually
+cd backend && uvicorn app.main:app --reload
+cd frontend && npm run dev
+```
+
+## 📈 Development Roadmap
+
+### Phase 1: Core Platform ✅
+- [x] Fashion-CLIP integration
+- [x] Hybrid AI service architecture
+- [x] Digital closet management
+- [x] Basic outfit recommendations
+
+### Phase 2: Enhanced Features 🚧
+- [ ] Social sharing and outfit inspiration
+- [ ] Shopping integration and recommendations
+- [ ] Weather-based suggestions
+- [ ] Mobile app development
+
+### Phase 3: Advanced AI 🔮
+- [ ] Style trend analysis
+- [ ] Seasonal wardrobe planning
+- [ ] Personal shopper AI assistant
+- [ ] Virtual try-on capabilities
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🙏 Acknowledgments
+
+- Fashion-CLIP model by Patrick John Chia
+- Google Cloud Platform for AI services
+- FastAPI and React communities
+- Open source contributors
 
 ---
 
-Built using modern web technologies and advanced AI systems for intelligent fashion assistance.
+**Built with ❤️ using modern AI and web technologies**

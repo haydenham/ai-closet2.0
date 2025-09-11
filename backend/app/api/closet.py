@@ -25,7 +25,7 @@ from app.schemas.clothing_item import (
 from app.schemas.security import SecureClothingItemUpload, SecureSearchQuery
 from app.core.security import FileValidator, SecurityConfig
 from app.services.gcp_storage_service import GCPStorageService
-from app.services.gcp_vision_service import GCPVisionService
+from app.services.hybrid_fashion_service import get_hybrid_fashion_service
 from google.auth.exceptions import DefaultCredentialsError
 
 logger = logging.getLogger(__name__)
@@ -34,22 +34,22 @@ router = APIRouter(prefix="/closet", tags=["closet"])
 # Initialize services (with error handling for testing / missing credentials)
 try:
     storage_service = GCPStorageService()
-    vision_service = GCPVisionService()
-    logger.info("✅ GCP services initialized successfully")
+    hybrid_fashion_service = get_hybrid_fashion_service()
+    logger.info("✅ GCP Storage and Hybrid Fashion services initialized successfully")
 except (ImportError, DefaultCredentialsError, Exception) as e:  # broad: if any cloud init issue just disable for tests
-    logger.error(f"❌ GCP services failed to initialize: {str(e)}")
+    logger.error(f"❌ Services failed to initialize: {str(e)}")
     storage_service = None
-    vision_service = None
+    hybrid_fashion_service = None
 
 
 @router.get("/debug/services")
 async def debug_services():
-    """Debug endpoint to check GCP service status"""
+    """Debug endpoint to check service status"""
     return {
         "storage_service": storage_service is not None,
-        "vision_service": vision_service is not None,
+        "hybrid_fashion_service": hybrid_fashion_service is not None,
         "storage_type": str(type(storage_service)),
-        "vision_type": str(type(vision_service))
+        "hybrid_service_type": str(type(hybrid_fashion_service))
     }
 
 
@@ -96,9 +96,9 @@ async def upload_clothing_item(
     
     try:
         # Check if services are available
-        logger.info(f"Service check - storage: {storage_service is not None}, vision: {vision_service is not None}")
-        if not storage_service or not vision_service:
-            raise HTTPException(status_code=503, detail="GCP services not available")
+        logger.info(f"Service check - storage: {storage_service is not None}, hybrid_fashion: {hybrid_fashion_service is not None}")
+        if not storage_service or not hybrid_fashion_service:
+            raise HTTPException(status_code=503, detail="Required services not available")
         
         # Upload to GCP Storage using validated filename
         image_url, stored_filename = storage_service.upload_user_image(
@@ -108,25 +108,29 @@ async def upload_clothing_item(
             content_type=file_info['mime_type']
         )
         
-        # Analyze image with GCP Vision API for automatic feature extraction
-        logger.info("Starting GCP Vision analysis...")
+        # Analyze image with Hybrid Fashion Service for comprehensive analysis
+        logger.info("Starting Hybrid Fashion analysis...")
         try:
-            vision_analysis = vision_service.analyze_clothing_image(file_data)
-            logger.info(f"Vision analysis completed. Features found: {len(vision_analysis.get('extracted_features', []))}")
-            logger.info(f"Vision analysis result keys: {list(vision_analysis.keys())}")
-        except Exception as vision_error:
-            logger.error(f"Vision API error: {str(vision_error)}")
+            fashion_analysis = await hybrid_fashion_service.analyze_clothing_item(file_data)
+            logger.info(f"Hybrid analysis completed. Success: {fashion_analysis.get('success', False)}")
+            logger.info(f"Analysis sources: {fashion_analysis.get('analysis_sources', [])}")
+        except Exception as analysis_error:
+            logger.error(f"Hybrid Fashion analysis error: {str(analysis_error)}")
             import traceback
-            logger.error(f"Vision API traceback: {traceback.format_exc()}")
-            # Continue with empty analysis if Vision API fails
-            vision_analysis = {
-                'extracted_features': [],
-                'dominant_colors': [],
-                'suggested_category': 'unknown'
+            logger.error(f"Analysis traceback: {traceback.format_exc()}")
+            # Continue with empty analysis if service fails
+            fashion_analysis = {
+                'success': False,
+                'category': 'unknown',
+                'style': [],
+                'features': [],
+                'colors': {},
+                'brands': {},
+                'errors': [str(analysis_error)]
             }
         
         # Merge user-provided tags with extracted features and description keywords
-        extracted_features = vision_analysis.get('extracted_features', [])
+        extracted_features = fashion_analysis.get('features', [])
         
         # Extract keywords from description if provided
         description_features = []
@@ -144,24 +148,30 @@ async def upload_clothing_item(
         # Use detected colors if not provided
         final_color = form_data.color
         detected_colors = []
-        if vision_analysis.get('dominant_colors'):
+        colors_data = fashion_analysis.get('colors', {})
+        if colors_data.get('primary_color') and colors_data['primary_color'] != 'unknown':
             # Get the primary color for the color field
             if not form_data.color:
-                dominant_color = vision_analysis['dominant_colors'][0]
-                final_color = dominant_color.get('color_name', 'unknown')
+                final_color = colors_data['primary_color']
             
             # Add all confident colors to tags
-            detected_colors = [
-                color.get('color_name') for color in vision_analysis['dominant_colors']
-                if color.get('color_name') and color.get('color_name') != 'unknown'
-            ]
+            color_percentages = colors_data.get('color_percentages', {})
+            detected_colors = [color for color in color_percentages.keys() if color != 'unknown']
         
-        # Combine all tags: user tags + extracted features + detected colors + description features
-        all_tags = list(set(form_data.tags + extracted_features + detected_colors + description_features))
+        # Extract brand information
+        detected_brands = []
+        brands_data = fashion_analysis.get('brands', {})
+        detected_brand_list = brands_data.get('detected_brands', [])
+        if detected_brand_list:
+            detected_brands = [brand.get('brand', '') for brand in detected_brand_list[:3] if brand.get('brand')]
         
-        # Use suggested category if user didn't provide one or if Vision API has high confidence
+        # Combine all tags: user tags + extracted features + detected colors + description features + style tags
+        style_tags = fashion_analysis.get('style', [])
+        all_tags = list(set(form_data.tags + extracted_features + detected_colors + description_features + style_tags + detected_brands))
+        
+        # Use suggested category if user didn't provide one or if analysis has high confidence
         final_category = form_data.category
-        suggested_category = vision_analysis.get('suggested_category', 'unknown')
+        suggested_category = fashion_analysis.get('category', 'unknown')
         if suggested_category != 'unknown' and not form_data.category:
             final_category = suggested_category
         
@@ -287,18 +297,18 @@ async def update_clothing_item(
     for field, value in update_data.items():
         setattr(item, field, value)
     
-    # If category changed significantly, re-analyze with Vision API
+    # If category changed significantly, re-analyze with Hybrid Fashion Service
     if item_update.category and item_update.category != item.category:
         try:
             # Re-analyze the image for better feature extraction
-            if vision_service:
+            if hybrid_fashion_service:
                 import requests
                 response = requests.get(item.image_url)
                 if response.status_code == 200:
-                    vision_analysis = vision_service.analyze_clothing_image(response.content)
+                    fashion_analysis = await hybrid_fashion_service.analyze_clothing_item(response.content)
                 
                 # Update tags with new extracted features
-                extracted_features = vision_analysis.get('extracted_features', [])
+                extracted_features = fashion_analysis.get('features', [])
                 existing_tags = item.tags or []
                 
                 # Merge existing user tags with new extracted features
@@ -544,9 +554,9 @@ async def reanalyze_clothing_item(
         raise HTTPException(status_code=404, detail="Clothing item not found")
     
     try:
-        # Check if vision service is available
-        if not vision_service:
-            raise HTTPException(status_code=503, detail="GCP Vision service not available")
+        # Check if hybrid fashion service is available
+        if not hybrid_fashion_service:
+            raise HTTPException(status_code=503, detail="Hybrid Fashion service not available")
         
         # Download image from URL
         import requests
@@ -554,12 +564,12 @@ async def reanalyze_clothing_item(
         if response.status_code != 200:
             raise HTTPException(status_code=400, detail="Could not access item image")
         
-        # Re-analyze with Vision API
-        vision_analysis = vision_service.analyze_clothing_image(response.content)
+        # Re-analyze with Hybrid Fashion Service
+        fashion_analysis = await hybrid_fashion_service.analyze_clothing_item(response.content)
         
         # Update item with new analysis
-        extracted_features = vision_analysis.get('extracted_features', [])
-        suggested_category = vision_analysis.get('suggested_category', item.category)
+        extracted_features = fashion_analysis.get('features', [])
+        suggested_category = fashion_analysis.get('category', item.category)
         
         # Preserve user-added tags and merge with new extracted features
         existing_tags = item.tags or []
@@ -568,14 +578,14 @@ async def reanalyze_clothing_item(
         
         item.tags = all_tags
         
-        # Update category if Vision API suggests a better one
+        # Update category if Fashion analysis suggests a better one
         if suggested_category != 'unknown' and suggested_category != item.category:
             item.category = suggested_category
         
         # Update color if detected and not set
-        if not item.color and vision_analysis.get('dominant_colors'):
-            dominant_color = vision_analysis['dominant_colors'][0]
-            item.color = dominant_color.get('color_name', item.color)
+        colors_data = fashion_analysis.get('colors', {})
+        if not item.color and colors_data.get('primary_color') and colors_data['primary_color'] != 'unknown':
+            item.color = colors_data['primary_color']
         
         await db.commit()
         await db.refresh(item)
@@ -586,8 +596,10 @@ async def reanalyze_clothing_item(
             'analysis_results': {
                 'extracted_features': extracted_features,
                 'suggested_category': suggested_category,
-                'dominant_colors': vision_analysis.get('dominant_colors', []),
-                'confidence_scores': vision_analysis.get('confidence_scores', {})
+                'colors': colors_data,
+                'brands': fashion_analysis.get('brands', {}),
+                'analysis_sources': fashion_analysis.get('analysis_sources', []),
+                'confidence_scores': fashion_analysis.get('confidence_scores', {})
             }
         }
         

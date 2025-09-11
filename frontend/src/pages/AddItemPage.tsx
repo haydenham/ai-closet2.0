@@ -30,6 +30,18 @@ export function AddItemPage() {
         </button>
       </div>
       
+      <div className="bg-blue-50 border border-blue-200 rounded-sm p-4 mb-6">
+        <div className="flex items-start space-x-3">
+          <div className="text-blue-500 text-lg">🤖</div>
+          <div>
+            <div className="text-sm font-medium text-blue-900">AI-Powered Fashion Analysis</div>
+            <div className="text-sm text-blue-700 mt-1">
+              Upload an image and our Fashion-CLIP AI will automatically detect categories, styles, materials, colors, and brands!
+            </div>
+          </div>
+        </div>
+      </div>
+      
       <div className="max-w-2xl">
         <AddItemForm
           onSubmit={handleSubmit}

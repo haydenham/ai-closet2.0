@@ -5,8 +5,18 @@ import json
 import logging
 from typing import Dict, List, Optional, Any
 from pydantic import BaseModel, ValidationError
-from vertexai.generative_models import GenerativeModel
-import vertexai
+try:
+    from vertexai.generative_models import GenerativeModel
+    import vertexai
+    VERTEXAI_AVAILABLE = True
+except ImportError:
+    try:
+        # Fallback for older versions
+        from google.cloud import aiplatform
+        from google.cloud.aiplatform import gapic
+        VERTEXAI_AVAILABLE = False
+    except ImportError:
+        VERTEXAI_AVAILABLE = False
 
 from app.core.config import settings
 
@@ -42,29 +52,39 @@ class GeminiService:
     
     def __init__(self):
         """Initialize the Gemini service with Vertex AI configuration."""
+        if not VERTEXAI_AVAILABLE:
+            logger.warning("Vertex AI is not available - Gemini service will be disabled")
+            self.model = None
+            return
+            
         self.project_id = settings.GCP_PROJECT_ID
         self.location = settings.GCP_LOCATION
         self.endpoint_id = settings.GEMINI_ENDPOINT_ID
         
-        # Initialize Vertex AI
-        vertexai.init(project=self.project_id, location=self.location)
-        
-        # Try the tuned model first, fallback to endpoint if needed
         try:
-            # Use the tuned model format we discovered from the tuning job details
-            self.model = GenerativeModel(model_name="tunedModels/8331222804519190528")
-            logger.info("Initialized with tuned model: tunedModels/8331222804519190528")
-        except Exception as e:
-            logger.warning(f"Failed to initialize tuned model: {e}")
-            # Fallback to endpoint approach
+            # Initialize Vertex AI
+            vertexai.init(project=self.project_id, location=self.location)
+            
+            # Try the tuned model first, fallback to endpoint if needed
             try:
-                self.model = GenerativeModel(
-                    model_name=f"projects/{self.project_id}/locations/{self.location}/endpoints/{self.endpoint_id}"
-                )
-                logger.info(f"Initialized with endpoint: {self.endpoint_id}")
-            except Exception as e2:
-                logger.error(f"Failed to initialize with endpoint: {e2}")
-                raise GeminiServiceError(f"Failed to initialize Gemini model: {e2}")
+                # Use the tuned model format we discovered from the tuning job details
+                self.model = GenerativeModel(model_name="tunedModels/8331222804519190528")
+                logger.info("Initialized with tuned model: tunedModels/8331222804519190528")
+            except Exception as e:
+                logger.warning(f"Failed to initialize tuned model: {e}")
+                # Fallback to endpoint approach
+                try:
+                    self.model = GenerativeModel(
+                        model_name=f"projects/{self.project_id}/locations/{self.location}/endpoints/{self.endpoint_id}"
+                    )
+                    logger.info(f"Initialized with endpoint: {self.endpoint_id}")
+                except Exception as e2:
+                    logger.error(f"Failed to initialize with endpoint: {e2}")
+                    raise GeminiServiceError(f"Failed to initialize Gemini model: {e2}")
+        
+        except Exception as init_error:
+            logger.error(f"Failed to initialize Vertex AI: {init_error}")
+            self.model = None
         
         self.system_prompt = self._get_system_prompt()
 
@@ -136,6 +156,10 @@ Guidelines:
             Exception: If the API call fails
         """
         try:
+            # Check if model is available
+            if not self.model:
+                raise GeminiServiceError("Gemini model is not available - Vertex AI failed to initialize")
+                
             # Build the dynamic user prompt
             user_prompt = self._build_user_prompt(
                 gender=gender,
