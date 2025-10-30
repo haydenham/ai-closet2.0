@@ -38,3 +38,5 @@ transformers>=4.35.0,<5.0.0  # Hugging Face transformers for CLIP
 tokenizers>=0.15.0,<1.0.0  # Required by transformers
 scipy>=1.11.0,<2.0.0  # Scientific computing for embeddings
 aiohttp>=3.9.1,<4.0.0  # HTTP client for Cloud Run communication
+
+"pydantic[email]"

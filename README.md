@@ -4,33 +4,33 @@
 
 AI Closet 2.0 is a sophisticated fashion platform that combines cutting-edge computer vision with machine learning to provide personalized style analysis and outfit recommendations. The platform features a hybrid AI architecture combining Fashion-CLIP models with Google Cloud services for comprehensive clothing analysis.
 
-## 🚀 Key Features
+## Key Features
 
-### 🧠 Advanced AI Analysis
+### Advanced AI Analysis
 - **Fashion-CLIP Integration**: State-of-the-art fashion-specialized computer vision model
 - **Hybrid Service Architecture**: Combines Fashion-CLIP with GCP Color & Brand recognition
 - **Semantic Embeddings**: 512-dimensional vectors for precise similarity matching
 - **4-Metric Scoring System**: Semantic features, style context, category matching, and color harmony
 
-### 👗 Digital Closet Management
+### Digital Closet Management
 - **Visual Wardrobe Organization**: Upload and categorize clothing items with photos
 - **Automatic Feature Extraction**: AI-powered analysis of style, color, patterns, and materials
 - **Smart Tagging System**: Automatic categorization and manual tag enhancement
 - **Real-time Analysis**: Instant clothing analysis upon upload
 
-### 🎯 Personalized Recommendations
+### Personalized Recommendations
 - **Context-Aware Suggestions**: Occasion and weather-based outfit recommendations
 - **Style Profile Matching**: AI learns individual style preferences
 - **Color Coordination**: Advanced color harmony analysis
 - **Missing Item Detection**: Identifies gaps in wardrobe for shopping recommendations
 
-### 🔐 Security & Performance
+### Security & Performance
 - **JWT Authentication**: Secure user account management
 - **Redis Caching**: Optimized performance with intelligent caching
 - **Cloud-Native Architecture**: Scalable deployment on Google Cloud Platform
 - **Production-Ready**: 8GB memory optimization for Fashion-CLIP processing
 
-## 🏗️ Architecture
+## Architecture
 
 ### Frontend (React + TypeScript)
 ```
@@ -82,7 +82,7 @@ Hybrid Fashion Service
 └── Error handling
 ```
 
-## 🛠️ Technology Stack
+## Technology Stack
 
 ### Core Technologies
 - **Backend**: Python 3.13, FastAPI, SQLAlchemy, Alembic
@@ -104,7 +104,7 @@ Hybrid Fashion Service
 - **Google Cloud Vision**: Computer vision services
 - **Docker**: Containerization for consistent deployment
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 - Python 3.13+
@@ -148,7 +148,7 @@ GOOGLE_CLOUD_PROJECT=your-project-id
 FASHION_CLIP_SERVICE_URL=https://your-cloud-run-url
 ```
 
-## 📊 Performance Metrics
+## Performance Metrics
 
 - **API Response Time**: <200ms average
 - **Fashion-CLIP Analysis**: 200-500ms per image
@@ -157,7 +157,7 @@ FASHION_CLIP_SERVICE_URL=https://your-cloud-run-url
 - **Memory Usage**: 8GB for Fashion-CLIP service
 - **Concurrent Users**: Scales with Cloud Run
 
-## 🧪 Testing
+## Testing
 
 ### Backend Tests
 ```bash
@@ -171,7 +171,7 @@ cd frontend
 npm run test:coverage
 ```
 
-## 🚀 Deployment
+## Deployment
 
 ### Production Deployment
 ```bash
@@ -199,27 +199,27 @@ cd backend && uvicorn app.main:app --reload
 cd frontend && npm run dev
 ```
 
-## 📈 Development Roadmap
+## Development Roadmap
 
-### Phase 1: Core Platform ✅
+### Phase 1: Core Platform (Completed)
 - [x] Fashion-CLIP integration
 - [x] Hybrid AI service architecture
 - [x] Digital closet management
 - [x] Basic outfit recommendations
 
-### Phase 2: Enhanced Features 🚧
+### Phase 2: Enhanced Features (In Progress)
 - [ ] Social sharing and outfit inspiration
 - [ ] Shopping integration and recommendations
 - [ ] Weather-based suggestions
 - [ ] Mobile app development
 
-### Phase 3: Advanced AI 🔮
+### Phase 3: Advanced AI (Planned)
 - [ ] Style trend analysis
 - [ ] Seasonal wardrobe planning
 - [ ] Personal shopper AI assistant
 - [ ] Virtual try-on capabilities
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
@@ -227,11 +227,11 @@ cd frontend && npm run dev
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📄 License
+## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is proprietary software - see the LICENSE file for details.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - Fashion-CLIP model by Patrick John Chia
 - Google Cloud Platform for AI services
@@ -240,4 +240,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ---
 
-**Built with ❤️ using modern AI and web technologies**
+**Built using modern AI and web technologies**
