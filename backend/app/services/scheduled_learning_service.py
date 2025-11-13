@@ -137,12 +137,12 @@ class ScheduledLearningService:
             db = self.SessionLocal()
             
             # Get unprocessed items
-            from app.models.quiz_system import QuizClothingItem
+            from app.models.quiz import QuizItem
             from sqlalchemy import or_
             
-            unprocessed_items = db.query(QuizClothingItem).filter(
+            unprocessed_items = db.query(QuizItem).filter(
                 or_(
-                    QuizClothingItem.auto_extracted_features.is_(None),
+                    QuizItem.name.is_(None),
                     QuizClothingItem.auto_extracted_features == []
                 )
             ).limit(max_items).all()

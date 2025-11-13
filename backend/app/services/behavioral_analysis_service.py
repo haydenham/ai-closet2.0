@@ -10,10 +10,7 @@ import numpy as np
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, or_, desc
 
-from app.models.quiz_system import (
-    QuizResponse, QuizClothingItem, StyleCategory, StyleAssignmentFeedback,
-    FeatureLearningData, FeatureCorrelation
-)
+from app.models.quiz import QuizResponse, QuizItem, StyleCategory
 from app.models.user import User
 from app.models.clothing_item import ClothingItem
 

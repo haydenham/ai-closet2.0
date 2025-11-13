@@ -14,7 +14,7 @@ from app.models.user import User
 from app.models.outfit_recommendation import OutfitRecommendation as OutfitRecommendationModel, RecommendationFeedback
 from app.services.gemini_service import gemini_service, OutfitRecommendation
 from app.services.outfit_matching_service import get_outfit_matching_service
-from app.services.quiz_service import StyleProfileService
+from app.services.quiz import StyleProfileService
 from app.schemas.outfit_recommendation import (
     OutfitRecommendationCreate, OutfitRecommendationResponse, 
     RecommendationFeedbackResponse,

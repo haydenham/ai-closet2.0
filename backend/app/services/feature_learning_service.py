@@ -16,10 +16,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, or_
 
 from app.core.database import get_sync_session
-from app.models.quiz_system import (
-    QuizClothingItem, FeatureLearningData, FeatureCorrelation,
-    StyleAssignmentFeedback, QuizResponse, StyleCategory
-)
+from app.models.quiz import QuizItem, QuizResponse, StyleCategory
 from app.models.user import User
 from app.services.gcp_vision_service import GCPVisionService
 

@@ -9,14 +9,7 @@ from .user import User, EmailVerificationToken, PasswordResetToken
 from .style_profile import StyleProfile, QuizQuestion
 from .clothing_item import ClothingItem, ClothingCategory
 from .outfit_recommendation import OutfitRecommendation, RecommendationFeedback, outfit_clothing_items
-from .quiz_system import (
-    QuizClothingItem, 
-    StyleCategory, 
-    QuizResponse, 
-    QuizResponseItem,
-    FeatureLearningData, 
-    FeatureCorrelation
-)
+from .quiz import QuizItem, StyleCategory, QuizResponse
 
 # Import base for convenience
 from app.core.database import Base
@@ -33,10 +26,7 @@ __all__ = [
     "OutfitRecommendation",
     "RecommendationFeedback",
     "outfit_clothing_items",
-    "QuizClothingItem",
+    "QuizItem",
     "StyleCategory",
     "QuizResponse",
-    "QuizResponseItem",
-    "FeatureLearningData",
-    "FeatureCorrelation",
 ]
