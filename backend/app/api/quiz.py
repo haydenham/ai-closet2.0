@@ -57,13 +57,29 @@ async def get_quiz_questions(
             detail="Gender must be 'female' or 'male'"
         )
     
+    # Define question text for each type
+    question_texts = {
+        "pants": "Select the pants you would most want to wear",
+        "shirt": "Select the top you would most want to wear",
+        "shorts": "Select the shorts you would most want to wear",
+        "overlayer": "Select the jacket or layering piece you would most want to wear",
+        "shoes": "Select the shoes you would most want to wear"
+    }
+    
     try:
-        questions = QuizItemService.get_quiz_questions(db, gender)
+        questions_data = QuizItemService.get_quiz_questions(db, gender)
         
-        # Verify we have items for all question types
-        for question_type, items in questions.items():
+        # Format with question text
+        from app.schemas.quiz import QuizQuestionType
+        questions = {}
+        for question_type, items in questions_data.items():
             if not items:
                 logger.warning(f"No items found for {gender} {question_type}")
+            
+            questions[question_type] = QuizQuestionType(
+                question_text=question_texts.get(question_type, f"Select your preferred {question_type}"),
+                items=items
+            )
         
         return QuizQuestionsResponse(
             gender=gender,

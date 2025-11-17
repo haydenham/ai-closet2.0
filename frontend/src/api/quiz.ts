@@ -2,32 +2,30 @@ import { api } from './client'
 
 export interface QuizClothingItem {
   id: string
-  name: string
+  name: string | null
   image_url: string
+  question_type: string
+  style_category: string
   gender: string
-  category: string
-  features: string[]
-  auto_extracted_features?: string[]
-  selection_count: number
+  display_order: number | null
   is_active: boolean
   created_at: string
   updated_at: string
 }
 
-export interface QuizClothingItemsResponse {
-  category: string
+export interface QuizQuestionType {
+  question_text: string
   items: QuizClothingItem[]
 }
 
 export interface QuizQuestionsResponse {
   gender: string
-  questions: Record<string, QuizClothingItemsResponse>
+  questions: Record<string, QuizQuestionType>
 }
 
 export interface QuizSubmissionData {
   gender: string
-  selected_items: Record<string, string> // category -> item_id
-  weights?: Record<string, number>
+  selections: Record<string, string> // question_type -> item_id (pants, shirt, shorts, overlayer, shoes)
 }
 
 export interface StyleCategory {
@@ -44,20 +42,11 @@ export interface StyleCategory {
 
 export interface QuizResponse {
   id: string
-  user_id: string
-  selected_item_ids: string[]
-  calculated_scores: Record<string, number>
-  assigned_category: string
-  assigned_category_id?: string
-  confidence_score?: number
-  user_satisfaction_rating?: number
-  user_feedback_text?: string
+  primary_style: string
+  secondary_style?: string | null
+  style_message: string
+  scores: Record<string, number>
   completed_at: string
-  selected_items?: QuizClothingItem[]
-  assigned_category_obj?: StyleCategory
-  is_hybrid?: boolean
-  hybrid_styles?: string[]
-  primary_score?: number
 }
 
 const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === 'true'
@@ -65,83 +54,85 @@ const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === 'true'
 export async function fetchQuizQuestions(gender: 'male' | 'female'): Promise<QuizQuestionsResponse> {
   if (USE_MOCKS) {
     await new Promise(r => setTimeout(r, 500))
+    const mockStyles = ['Bohemian', 'Streetwear', 'Classic', 'Feminine', 'Edgy', 'Athleisure', 'Vintage', 'Glamorous', 'Eclectic', 'Minimalist']
+    
     return {
       gender,
       questions: {
-        top: {
-          category: 'top',
-          items: [
-            {
-              id: 'mock-top-1',
-              name: 'Casual T-Shirt',
-              image_url: 'https://via.placeholder.com/150x200.png?text=T-Shirt',
-              gender,
-              category: 'top',
-              features: ['casual', 'comfortable'],
-              selection_count: 0,
-              is_active: true,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            },
-            {
-              id: 'mock-top-2', 
-              name: 'Dress Shirt',
-              image_url: 'https://via.placeholder.com/150x200.png?text=Dress+Shirt',
-              gender,
-              category: 'top',
-              features: ['formal', 'professional'],
-              selection_count: 0,
-              is_active: true,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            }
-          ]
+        pants: {
+          question_text: 'Select the pants you would most want to wear',
+          items: mockStyles.map((style, i) => ({
+            id: `mock-pants-${i}`,
+            name: `${style} Pants`,
+            image_url: `https://via.placeholder.com/400x600.png?text=${style}+Pants`,
+            question_type: 'pants',
+            style_category: style,
+            gender,
+            display_order: i,
+            is_active: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }))
         },
-        bottom: {
-          category: 'bottom',
-          items: [
-            {
-              id: 'mock-bottom-1',
-              name: 'Jeans',
-              image_url: 'https://via.placeholder.com/150x200.png?text=Jeans',
-              gender,
-              category: 'bottom',
-              features: ['casual', 'denim'],
-              selection_count: 0,
-              is_active: true,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            }
-          ]
+        shirt: {
+          question_text: 'Select the top you would most want to wear',
+          items: mockStyles.map((style, i) => ({
+            id: `mock-shirt-${i}`,
+            name: `${style} Shirt`,
+            image_url: `https://via.placeholder.com/400x600.png?text=${style}+Shirt`,
+            question_type: 'shirt',
+            style_category: style,
+            gender,
+            display_order: i,
+            is_active: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }))
+        },
+        shorts: {
+          question_text: 'Select the shorts you would most want to wear',
+          items: mockStyles.map((style, i) => ({
+            id: `mock-shorts-${i}`,
+            name: `${style} Shorts`,
+            image_url: `https://via.placeholder.com/400x600.png?text=${style}+Shorts`,
+            question_type: 'shorts',
+            style_category: style,
+            gender,
+            display_order: i,
+            is_active: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }))
+        },
+        overlayer: {
+          question_text: 'Select the jacket you would most want to wear',
+          items: mockStyles.map((style, i) => ({
+            id: `mock-overlayer-${i}`,
+            name: `${style} Jacket`,
+            image_url: `https://via.placeholder.com/400x600.png?text=${style}+Jacket`,
+            question_type: 'overlayer',
+            style_category: style,
+            gender,
+            display_order: i,
+            is_active: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }))
         },
         shoes: {
-          category: 'shoes',
-          items: [
-            {
-              id: 'mock-shoes-1',
-              name: 'Sneakers',
-              image_url: 'https://via.placeholder.com/150x200.png?text=Sneakers',
-              gender,
-              category: 'shoes',
-              features: ['casual', 'comfortable'],
-              selection_count: 0,
-              is_active: true,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            }
-          ]
-        },
-        layering: {
-          category: 'layering',
-          items: []
-        },
-        accessory: {
-          category: 'accessory',
-          items: []
-        },
-        complete_outfit: {
-          category: 'complete_outfit',
-          items: []
+          question_text: 'Select the shoes you would most want to wear',
+          items: mockStyles.map((style, i) => ({
+            id: `mock-shoes-${i}`,
+            name: `${style} Shoes`,
+            image_url: `https://via.placeholder.com/400x600.png?text=${style}+Shoes`,
+            question_type: 'shoes',
+            style_category: style,
+            gender,
+            display_order: i,
+            is_active: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }))
         }
       }
     }
@@ -156,30 +147,20 @@ export async function submitQuiz(submission: QuizSubmissionData): Promise<QuizRe
     await new Promise(r => setTimeout(r, 1500))
     return {
       id: 'mock-response-1',
-      user_id: 'mock-user-1',
-      selected_item_ids: Object.values(submission.selected_items),
-      calculated_scores: {
-        'casual': 0.8,
-        'formal': 0.2,
-        'bohemian': 0.1
+      primary_style: 'Bohemian',
+      secondary_style: 'Classic',
+      style_message: 'Bohemian with a hint of Classic',
+      scores: {
+        'Bohemian': 2,
+        'Classic': 2,
+        'Streetwear': 1
       },
-      assigned_category: 'Casual Chic',
-      confidence_score: 0.85,
-      completed_at: new Date().toISOString(),
-      is_hybrid: false,
-      hybrid_styles: [],
-      primary_score: 0.8
+      completed_at: new Date().toISOString()
     }
   }
   
-  // Convert string IDs to UUID format for backend compatibility
-  const backendSubmission = {
-    gender: submission.gender,
-    selected_items: submission.selected_items, // Backend will handle string to UUID conversion
-    weights: submission.weights || {}
-  }
-  
-  const res = await api.post<QuizResponse>('/quiz/submit', backendSubmission)
+  // Submit to backend - backend expects "selections" key
+  const res = await api.post<QuizResponse>('/quiz/submit', submission)
   return res.data
 }
 

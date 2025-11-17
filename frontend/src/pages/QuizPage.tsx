@@ -5,41 +5,15 @@ import { Alert, ErrorMessage } from '../components/ui/Alert'
 import { QuizClothingItem, fetchQuizQuestions, submitQuiz, QuizSubmissionData } from '../api/quiz'
 import { layoutClasses } from '../utils/layout'
 
-const CATEGORIES = ['top', 'bottom', 'shoes', 'layering', 'accessory', 'complete_outfit']
-
-const CATEGORY_LABELS = {
-  top: {
-    female: 'Tops & Blouses',
-    male: 'Shirts & T-Shirts'
-  },
-  bottom: {
-    female: 'Bottoms & Skirts', 
-    male: 'Pants & Shorts'
-  },
-  shoes: {
-    female: 'Shoes & Heels',
-    male: 'Shoes & Sneakers'
-  },
-  layering: {
-    female: 'Jackets & Cardigans',
-    male: 'Jackets & Blazers'
-  },
-  accessory: {
-    female: 'Accessories & Jewelry',
-    male: 'Accessories & Watches'
-  },
-  complete_outfit: {
-    female: 'Complete Looks',
-    male: 'Complete Outfits'
-  }
-}
+// New quiz structure: 5 questions with 10 style options each
+const QUESTION_TYPES = ['pants', 'shirt', 'shorts', 'overlayer', 'shoes']
 
 export function QuizPage() {
   const navigate = useNavigate()
   const [currentStep, setCurrentStep] = useState<'gender' | 'quiz' | 'results'>('gender')
   const [gender, setGender] = useState<'male' | 'female' | null>(null)
-  const [currentCategory, setCurrentCategory] = useState(0)
-  const [questions, setQuestions] = useState<Record<string, QuizClothingItem[]>>({})
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
+  const [questions, setQuestions] = useState<Record<string, { text: string; items: QuizClothingItem[] }>>({})
   const [selections, setSelections] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -54,10 +28,16 @@ export function QuizPage() {
     try {
       const response = await fetchQuizQuestions(selectedGender)
       
-      // Convert to simpler format for UI
-      const questionsData: Record<string, QuizClothingItem[]> = {}
-      CATEGORIES.forEach(category => {
-        questionsData[category] = response.questions[category]?.items || []
+      // Store questions with their text and items
+      const questionsData: Record<string, { text: string; items: QuizClothingItem[] }> = {}
+      QUESTION_TYPES.forEach(questionType => {
+        const questionData = response.questions[questionType]
+        if (questionData) {
+          questionsData[questionType] = {
+            text: questionData.question_text,
+            items: questionData.items
+          }
+        }
       })
       
       setQuestions(questionsData)
@@ -69,24 +49,24 @@ export function QuizPage() {
     }
   }
 
-  const handleItemSelect = (category: string, itemId: string) => {
+  const handleItemSelect = (questionType: string, itemId: string) => {
     setSelections(prev => ({
       ...prev,
-      [category]: itemId
+      [questionType]: itemId
     }))
   }
 
   const handleNext = () => {
-    if (currentCategory < CATEGORIES.length - 1) {
-      setCurrentCategory(currentCategory + 1)
+    if (currentQuestionIndex < QUESTION_TYPES.length - 1) {
+      setCurrentQuestionIndex(currentQuestionIndex + 1)
     } else {
       handleSubmit()
     }
   }
 
   const handlePrevious = () => {
-    if (currentCategory > 0) {
-      setCurrentCategory(currentCategory - 1)
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex(currentQuestionIndex - 1)
     }
   }
 
@@ -99,12 +79,12 @@ export function QuizPage() {
     try {
       const submission: QuizSubmissionData = {
         gender,
-        selected_items: selections
+        selections: selections  // Backend expects "selections" key
       }
       
-      console.log('Submitting quiz:', submission) // Debug
+      console.log('Submitting quiz:', submission)
       const response = await submitQuiz(submission)
-      console.log('Quiz response:', response) // Debug
+      console.log('Quiz response:', response)
       setResult(response)
       setCurrentStep('results')
       
@@ -121,17 +101,19 @@ export function QuizPage() {
         })
       }, 1000)
     } catch (err: any) {
-      console.error('Quiz submission error:', err) // Debug
+      console.error('Quiz submission error:', err)
       setError(err.response?.data?.detail || err.message || 'Failed to submit quiz')
     } finally {
       setLoading(false)
     }
   }
 
-  const currentCategoryName = CATEGORIES[currentCategory]
-  const currentItems = questions[currentCategoryName] || []
-  const selectedItemId = selections[currentCategoryName]
-  const progress = ((currentCategory + 1) / CATEGORIES.length) * 100
+  const currentQuestionType = QUESTION_TYPES[currentQuestionIndex]
+  const currentQuestion = questions[currentQuestionType]
+  const currentItems = currentQuestion?.items || []
+  const currentQuestionText = currentQuestion?.text || ''
+  const selectedItemId = selections[currentQuestionType]
+  const progress = ((currentQuestionIndex + 1) / QUESTION_TYPES.length) * 100
 
   if (currentStep === 'gender') {
     return (
@@ -221,26 +203,40 @@ export function QuizPage() {
             <div className="space-y-4 text-left">
               <Alert variant="success">
                 <div className="space-y-2">
-                  <div className="font-medium text-lg">
-                    {result.assigned_category || 'Your Style Profile'}
+                  <div className="font-medium text-2xl">
+                    Your Style: {result.primary_style}
                   </div>
-                  {result.confidence_score && (
-                    <div className="text-sm">
-                      Confidence: {Math.round(result.confidence_score * 100)}%
-                    </div>
-                  )}
+                  <div className="text-sm text-neutral-700">
+                    {result.style_message}
+                  </div>
                 </div>
               </Alert>
               
-              {result.is_hybrid && result.hybrid_styles?.length > 0 && (
+              {result.secondary_style && (
                 <Alert variant="info">
                   <div>
-                    <div className="font-medium">Hybrid Style</div>
+                    <div className="font-medium">Secondary Style</div>
                     <div className="text-sm">
-                      You have a mix of: {result.hybrid_styles.join(', ')}
+                      {result.secondary_style}
                     </div>
                   </div>
                 </Alert>
+              )}
+              
+              {result.scores && Object.keys(result.scores).length > 0 && (
+                <div className="bg-neutral-50 rounded-lg p-4">
+                  <div className="font-medium mb-2">Your Style Breakdown</div>
+                  <div className="space-y-1 text-sm">
+                    {Object.entries(result.scores)
+                      .sort(([, a], [, b]) => (b as number) - (a as number))
+                      .map(([style, score]) => (
+                        <div key={style} className="flex justify-between">
+                          <span>{style}</span>
+                          <span className="text-neutral-600">{score as number} {(score as number) === 1 ? 'point' : 'points'}</span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
               )}
             </div>
           ) : (
@@ -276,7 +272,7 @@ export function QuizPage() {
               variant="outline"
               onClick={() => {
                 setCurrentStep('gender')
-                setCurrentCategory(0)
+                setCurrentQuestionIndex(0)
                 setSelections({})
                 setResult(null)
               }}
@@ -292,11 +288,11 @@ export function QuizPage() {
 
   return (
     <div className={layoutClasses.pageContainer}>
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-4xl mx-auto">
         {/* Progress Bar */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium">Question {currentCategory + 1} of {CATEGORIES.length}</span>
+            <span className="text-sm font-medium">Question {currentQuestionIndex + 1} of {QUESTION_TYPES.length}</span>
             <span className="text-sm text-neutral-600">{Math.round(progress)}% complete</span>
           </div>
           <div className="w-full bg-neutral-200 rounded-full h-2">
@@ -307,51 +303,46 @@ export function QuizPage() {
           </div>
         </div>
 
-        {/* Question */}
+        {/* Question Text */}
         <div className="text-center mb-8">
-          <h1 className="text-xl font-bold mb-2">
-            Which {CATEGORY_LABELS[currentCategoryName as keyof typeof CATEGORY_LABELS][gender || 'female']} do you prefer?
+          <h1 className="text-2xl font-bold mb-2">
+            {currentQuestionText}
           </h1>
           <p className="text-neutral-600">Choose the style that resonates with you most</p>
         </div>
 
-        {/* Items */}
+        {/* Items Grid - 10 images in a responsive grid */}
         {currentItems.length > 0 ? (
-          <div className="grid grid-cols-2 gap-6 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
             {currentItems.map((item) => (
               <div
                 key={item.id}
                 className={`
-                  border-2 rounded-lg p-4 cursor-pointer transition-all duration-200 hover:shadow-md
+                  border-2 rounded-lg p-3 cursor-pointer transition-all duration-200 hover:shadow-lg
                   ${selectedItemId === item.id 
-                    ? 'border-neutral-900 bg-neutral-50' 
-                    : 'border-neutral-200 hover:border-neutral-300'
+                    ? 'border-neutral-900 bg-neutral-50 shadow-md' 
+                    : 'border-neutral-200 hover:border-neutral-400'
                   }
                 `}
-                onClick={() => handleItemSelect(currentCategoryName, item.id)}
+                onClick={() => handleItemSelect(currentQuestionType, item.id)}
               >
-                <div className="aspect-square bg-neutral-100 rounded-lg mb-3 overflow-hidden">
+                <div className="aspect-[2/3] bg-neutral-100 rounded-lg mb-2 overflow-hidden">
                   <img 
                     src={item.image_url} 
-                    alt={item.name}
+                    alt={item.style_category}
                     className="w-full h-full object-cover"
                     onError={(e) => {
-                      e.currentTarget.src = `https://via.placeholder.com/200x200.png?text=${encodeURIComponent(item.name)}`
+                      e.currentTarget.src = `https://via.placeholder.com/200x300.png?text=${encodeURIComponent(item.style_category)}`
                     }}
                   />
                 </div>
-                <h3 className="font-medium text-center">{item.name}</h3>
-                {item.features.length > 0 && (
-                  <div className="text-xs text-neutral-600 text-center mt-1">
-                    {item.features.slice(0, 2).join(', ')}
-                  </div>
-                )}
+                <h3 className="font-medium text-center text-sm capitalize">{item.style_category}</h3>
               </div>
             ))}
           </div>
         ) : (
           <div className="text-center py-12">
-            <div className="text-neutral-400 mb-4">No items available for this category</div>
+            <div className="text-neutral-400 mb-4">No items available for this question</div>
             <Button onClick={handleNext} disabled={loading}>
               Skip this question
             </Button>
@@ -365,7 +356,7 @@ export function QuizPage() {
           <Button
             variant="outline"
             onClick={handlePrevious}
-            disabled={currentCategory === 0 || loading}
+            disabled={currentQuestionIndex === 0 || loading}
           >
             Previous
           </Button>
@@ -374,7 +365,7 @@ export function QuizPage() {
             onClick={handleNext}
             disabled={loading || (currentItems.length > 0 && !selectedItemId)}
           >
-            {loading ? 'Processing...' : currentCategory === CATEGORIES.length - 1 ? 'Complete Quiz' : 'Next'}
+            {loading ? 'Processing...' : currentQuestionIndex === QUESTION_TYPES.length - 1 ? 'Complete Quiz' : 'Next'}
           </Button>
         </div>
       </div>

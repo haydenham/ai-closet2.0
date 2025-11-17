@@ -69,11 +69,18 @@ class QuizItem(QuizItemBase):
         from_attributes = True
 
 
+# Quiz Question Type
+class QuizQuestionType(BaseModel):
+    """Schema for a single question type with its items"""
+    question_text: str
+    items: List[QuizItem]
+
+
 # Quiz Questions Response
 class QuizQuestionsResponse(BaseModel):
     """Schema for complete quiz questions response"""
     gender: str
-    questions: Dict[str, List[QuizItem]]  # {pants: [...], shirt: [...], ...}
+    questions: Dict[str, QuizQuestionType]  # {pants: {...}, shirt: {...}, ...}
 
 
 # Quiz Submission Schemas
