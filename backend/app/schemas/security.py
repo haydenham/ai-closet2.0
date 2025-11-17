@@ -47,6 +47,37 @@ class SecurePasswordResetConfirm(BaseModel):
     token: str
     new_password: str
 
+
+class SimpleOutfitRequest(BaseModel):
+    """
+    Simplified outfit request - user only provides natural language prompt.
+    Backend auto-injects gender, style, and weather.
+    """
+    prompt: str = Field(
+        ..., 
+        min_length=10, 
+        max_length=1000,
+        description="User's natural language description of occasion and desired outfit"
+    )
+    
+    @field_validator('prompt')
+    @classmethod
+    def validate_prompt(cls, v: str) -> str:
+        v = v.strip()
+        if len(v) < 10:
+            raise ValueError('Prompt must be at least 10 characters')
+        if len(v) > 1000:
+            raise ValueError('Prompt must be no more than 1000 characters')
+        return v
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "prompt": "I have a casual brunch with friends tomorrow and want something comfortable but stylish"
+            }
+        }
+
+
 class SecureClothingItemUpload(BaseModel):
     category: str
     category_id: Optional[str] = None

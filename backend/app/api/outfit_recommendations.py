@@ -20,7 +20,7 @@ from app.schemas.outfit_recommendation import (
     RecommendationFeedbackResponse,
     OutfitRecommendationSearch, RecommendationStats
 )
-from app.schemas.security import SecureOutfitRequest, SecureRecommendationFeedback
+from app.schemas.security import SecureOutfitRequest, SecureRecommendationFeedback, SimpleOutfitRequest
 
 logger = logging.getLogger(__name__)
 
@@ -40,86 +40,116 @@ class OutfitResponseSchema(BaseModel):
 
 @router.post("/generate", response_model=OutfitResponseSchema)
 async def generate_outfit_recommendation(
-    request: SecureOutfitRequest,
+    request: SimpleOutfitRequest,
     db: Session = Depends(get_sync_session),
     current_user: User = Depends(get_current_user)
 ):
     """
-    Generate outfit recommendation using Gemini AI with user's StyleProfile data.
+    Generate outfit recommendation with auto-injected context.
     
-    This endpoint gets the user's style profile from quiz results and uses that data
-    along with hardcoded weather to generate personalized recommendations.
+    The system automatically adds:
+    - User's gender (from profile)
+    - User's style preferences (from quiz results)
+    - Weather conditions (hardcoded as 'warm' for now)
+    
+    User only needs to provide a natural language prompt describing the occasion.
     """
     try:
-        logger.info(f"Generating outfit recommendation for user {current_user.id}")
+        logger.info(f"Generating outfit for user {current_user.id} with prompt: {request.prompt[:100]}...")
         
-        # Get user's StyleProfile from quiz results
-        style_profile = StyleProfileService.get_by_user_id(db, current_user.id)
-        
-        if not style_profile:
+        # 1. Get user's gender from profile
+        gender = current_user.gender
+        if not gender:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No style profile found. Please complete the style quiz first to get personalized recommendations."
+                detail="Gender not set in profile. Please update your profile."
             )
         
-        # Extract data from StyleProfile
-        quiz_data = style_profile.quiz_responses
+        # 2. Get user's style from quiz results
+        quiz_result = StyleProfileService.get_by_user_id(db, current_user.id)
+        if not quiz_result:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No style profile found. Please complete the style quiz first."
+            )
+        
+        quiz_data = quiz_result.quiz_responses
         if not quiz_data or not isinstance(quiz_data, dict):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid style profile data. Please retake the style quiz."
             )
         
-        # Get gender and style category from quiz results
-        gender = quiz_data.get("gender", "").lower()
-        style_category = quiz_data.get("assigned_category", "")
+        primary_style = quiz_data.get("primary_style", "")
+        secondary_style = quiz_data.get("secondary_style", "")
         
-        # Hardcode weather as "hot" for now
-        weather = "hot"
-        
-        if not gender or not style_category:
+        if not primary_style:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Incomplete style profile data. Please retake the style quiz."
+                detail="Style preferences not found. Please retake the style quiz."
             )
         
-        logger.info(f"Using StyleProfile data - Gender: {gender}, Style: {style_category}, Weather: {weather}")
+        # 3. Hardcode weather for now (future: integrate weather API)
+        weather = "warm"
         
-        # Convert gender format for Gemini API (male/female -> men/women)
+        logger.info(f"Context - Gender: {gender}, Style: {primary_style}, Weather: {weather}")
+        
+        # 4. Build structured prompt with prefix tags (for model training format)
+        structured_prompt = f"""GENDER: {gender.lower()}
+STYLE: {primary_style.lower()}
+WEATHER: {weather}
+OCCASION: {request.prompt}"""
+        
+        logger.info(f"Structured prompt:\n{structured_prompt}")
+        
+        # 5. Convert gender for Gemini API compatibility
         gemini_gender = gemini_service.convert_gender_for_gemini(gender)
         
-        # Validate inputs
+        # 6. Validate inputs
         gemini_service.validate_inputs(
             gender=gemini_gender,
-            style=style_category,
+            style=primary_style,
             weather=weather,
-            occasion=request.occasion
+            occasion=request.prompt
         )
         
-        # Generate recommendation using Gemini service with StyleProfile data
+        # 7. Generate recommendation using Gemini with structured prompt
         recommendation = await gemini_service.generate_outfit_recommendation(
             gender=gemini_gender,
-            style=style_category,
+            style_category=primary_style,
             weather=weather,
-            occasion=request.occasion,
-            user_request=request.user_request
+            occasion=request.prompt,
+            user_request=structured_prompt  # Pass the full structured prompt
         )
         
-        # Convert to dictionary for response
-        recommendation_dict = recommendation.model_dump(exclude_none=True)
+        # 8. Save to database with metadata
+        outfit_rec = OutfitRecommendationModel(
+            user_id=current_user.id,
+            occasion=request.prompt,  # Store original user prompt
+            weather=weather,
+            style_preferences=primary_style,
+            ai_model_used="gemini-1.5-flash",
+            ai_response=recommendation.model_dump(),
+            prompt_tokens=0,  # Gemini doesn't expose token counts
+            completion_tokens=0
+        )
+        db.add(outfit_rec)
+        db.commit()
+        db.refresh(outfit_rec)
         
-        logger.info(f"Successfully generated outfit recommendation for user {current_user.id}")
+        logger.info(f"Successfully generated and saved outfit recommendation ID {outfit_rec.id} for user {current_user.id}")
         
+        # 9. Return response
         return OutfitResponseSchema(
             success=True,
-            recommendation=recommendation_dict,
+            recommendation=recommendation.model_dump(),
             request_details={
                 "gender": gender,
-                "style": style_category,
+                "style": primary_style,
+                "secondary_style": secondary_style or "N/A",
                 "weather": weather,
-                "occasion": request.occasion,
-                "user_request": request.user_request,
-                "data_source": "StyleProfile from quiz results"
+                "prompt": request.prompt,
+                "structured_prompt": structured_prompt
             },
             message="Outfit recommendation generated successfully using your style profile"
         )
